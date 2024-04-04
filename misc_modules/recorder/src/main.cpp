@@ -490,6 +490,7 @@ private:
         // Replace in template
         templ = std::regex_replace(templ, std::regex("\\$t"), type);
         templ = std::regex_replace(templ, std::regex("\\$f"), freqStr);
+        templ = std::regex_replace(templ, std::regex("\\$kf"), kfreqStr);
         templ = std::regex_replace(templ, std::regex("\\$mf"), mfreqStr);
         templ = std::regex_replace(templ, std::regex("\\$h"), hourStr);
         templ = std::regex_replace(templ, std::regex("\\$m"), minStr);
