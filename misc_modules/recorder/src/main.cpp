@@ -461,20 +461,26 @@ private:
 
         // Format to string
         char freqStr[128];
+        char mfreqStr[128];
+        char kfreqStr[128];
         char hourStr[128];
         char minStr[128];
         char secStr[128];
         char dayStr[128];
         char monStr[128];
-        char yearStr[128];
+        char lyearStr[128];
+        char syearStr[128];
         const char* modeStr = "Unknown";
-        sprintf(freqStr, "%.0lfHz", freq);
+        sprintf(freqStr, "%.0lf", freq);
+        sprintf(mfreqStr, "%.5lf", freq / 1000);
+        sprintf(mfreqStr, "%.5lf", freq / 1000000);
         sprintf(hourStr, "%02d", ltm->tm_hour);
         sprintf(minStr, "%02d", ltm->tm_min);
         sprintf(secStr, "%02d", ltm->tm_sec);
         sprintf(dayStr, "%02d", ltm->tm_mday);
         sprintf(monStr, "%02d", ltm->tm_mon + 1);
-        sprintf(yearStr, "%02d", ltm->tm_year + 1900);
+        sprintf(lyearStr, "%02d", ltm->tm_year + 1900);
+        sprintf(syearStr, "%2d", ltm->tm_year - 100); //dirty hack
         if (core::modComManager.getModuleName(name) == "radio") {
             int mode;
             core::modComManager.callInterface(name, RADIO_IFACE_CMD_GET_MODE, NULL, &mode);
@@ -484,12 +490,14 @@ private:
         // Replace in template
         templ = std::regex_replace(templ, std::regex("\\$t"), type);
         templ = std::regex_replace(templ, std::regex("\\$f"), freqStr);
+        templ = std::regex_replace(templ, std::regex("\\$mf"), mfreqStr);
         templ = std::regex_replace(templ, std::regex("\\$h"), hourStr);
         templ = std::regex_replace(templ, std::regex("\\$m"), minStr);
         templ = std::regex_replace(templ, std::regex("\\$s"), secStr);
         templ = std::regex_replace(templ, std::regex("\\$d"), dayStr);
         templ = std::regex_replace(templ, std::regex("\\$M"), monStr);
-        templ = std::regex_replace(templ, std::regex("\\$y"), yearStr);
+        templ = std::regex_replace(templ, std::regex("\\$Y"), lyearStr);
+        templ = std::regex_replace(templ, std::regex("\\$y"), syearStr);
         templ = std::regex_replace(templ, std::regex("\\$r"), modeStr);
         return templ;
     }
