@@ -45,13 +45,11 @@ public:
         strcpy(nameTemplate, "$t_$f_$h-$m-$s_$d-$M-$y");
 
         // Define option lists
-        containers.define("MP3", mp3::FORMAT_MP3);
-        sampleRates.define(mp3::SAMP_RATE_22, "22050", mp3::SAMP_RATE_22);
-        sampleRates.define(mp3::SAMP_RATE_44, "44100", mp3::SAMP_RATE_44);
+        sampleRates.define(22050, "22050");
+        sampleRates.define(44100, "44100");
 
         // Load default config for option lists
-        containerId = containers.valueId(mp3::FORMAT_MP3);
-        sampleTypeId = sampleTypes.valueId(mp3::SAMP_RATE_44);
+        sampleRateId = sampleRates.valueId(44100);
 
         // Load config
         config.acquire();
@@ -61,10 +59,7 @@ public:
         if (config.conf[name].contains("recPath")) {
             folderSelect.setPath(config.conf[name]["recPath"]);
         }
-        if (config.conf[name].contains("container") && containers.keyExists(config.conf[name]["container"])) {
-            containerId = containers.keyId(config.conf[name]["container"]);
-        }
-        if (config.conf[name].contains("sampleRate") && sampleTypes.keyExists(config.conf[name]["sampleRate"])) {
+        if (config.conf[name].contains("sampleRate") && sampleRates.keyExists(config.conf[name]["sampleRate"])) {
             sampleRateId = sampleRates.keyId(config.conf[name]["sampleRate"]);
         }
         if (config.conf[name].contains("audioStream")) {
