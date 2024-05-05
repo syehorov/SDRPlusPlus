@@ -482,9 +482,9 @@ private:
         sprintf(lyearStr, "%02d", ltm->tm_year + 1900);
         sprintf(syearStr, "%2d", ltm->tm_year - 100); //dirty hack
         if (core::modComManager.getModuleName(name) == "radio") {
-            int mode;
+            int mode = -1;
             core::modComManager.callInterface(name, RADIO_IFACE_CMD_GET_MODE, NULL, &mode);
-            modeStr = radioModeToString[mode];
+            if (mode >= 0) { modeStr = radioModeToString[mode]; };
         }
 
         // Replace in template
