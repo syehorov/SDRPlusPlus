@@ -168,10 +168,9 @@ public:
         writer.setSamplerate(samplerate);
 
         // Open file
-        std::string type = (recMode == RECORDER_MODE_AUDIO) ? "audio" : "baseband";
         std::string vfoName = (recMode == RECORDER_MODE_AUDIO) ? selectedStreamName : "";
         std::string extension = ".wav";
-        std::string expandedPath = expandString(folderSelect.path + "/" + genFileName(nameTemplate, type, vfoName) + extension);
+        std::string expandedPath = expandString(folderSelect.path + "/" + genFileName(nameTemplate, recMode, vfoName) + extension);
         if (!writer.open(expandedPath)) {
             flog::error("Failed to open file for recording: {0}", expandedPath);
             return;
@@ -249,7 +248,6 @@ private:
         }
         ImGui::Columns(1, CONCAT("EndRecorderModeColumns##_", _this->name), false);
         ImGui::EndGroup();
-        if (_this->recording) { style::endDisabled(); }
 
         // Recording path
         if (_this->folderSelect.render("##_recorder_fold_" + _this->name)) {
@@ -284,8 +282,11 @@ private:
             config.release(true);
         }
 
+        if (_this->recording) { style::endDisabled(); }
+
         // Show additional audio options
         if (_this->recMode == RECORDER_MODE_AUDIO) {
+            if (_this->recording) { style::beginDisabled(); }
             ImGui::LeftLabel("Stream");
             ImGui::FillWidth();
             if (ImGui::Combo(CONCAT("##_recorder_stream_", _this->name), &_this->streamId, _this->audioStreams.txt)) {
@@ -294,6 +295,7 @@ private:
                 config.conf[_this->name]["audioStream"] = _this->audioStreams.key(_this->streamId);
                 config.release(true);
             }
+            if (_this->recording) { style::endDisabled(); }
 
             _this->updateAudioMeter(_this->audioLvl);
             ImGui::FillWidth();
@@ -449,7 +451,7 @@ private:
         { RADIO_IFACE_MODE_RAW, "RAW" }
     };
 
-    std::string genFileName(std::string templ, std::string type, std::string name) {
+    std::string genFileName(std::string templ, int mode, std::string name) {
         // Get data
         time_t now = time(0);
         tm* ltm = localtime(&now);
@@ -458,6 +460,9 @@ private:
         if (gui::waterfall.vfos.find(name) != gui::waterfall.vfos.end()) {
             freq += gui::waterfall.vfos[name]->generalOffset;
         }
+
+        // Select the recording type string
+        std::string type = (recMode == RECORDER_MODE_AUDIO) ? "audio" : "baseband";
 
         // Format to string
         char freqStr[128];
@@ -470,7 +475,7 @@ private:
         char monStr[128];
         char lyearStr[128];
         char syearStr[128];
-        const char* modeStr = "Unknown";
+        const char* modeStr = (recMode == RECORDER_MODE_AUDIO) ? "Unknown" : "IQ";
         sprintf(freqStr, "%.0lf", freq);
         sprintf(mfreqStr, "%.5lf", freq / 1000);
         sprintf(mfreqStr, "%.5lf", freq / 1000000);
