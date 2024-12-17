@@ -24,6 +24,9 @@ cp 'C:/Program Files/PothosSDR/bin/bladeRF.dll' sdrpp_windows_x64/
 
 cp $build_dir/source_modules/file_source/Release/file_source.dll sdrpp_windows_x64/modules/
 
+cp $build_dir/source_modules/fobossdr_source/Release/fobossdr_source.dll sdrpp_windows_x64/modules/
+cp 'C:/Program Files/RigExpert/Fobos/bin/fobos.dll' sdrpp_windows_x64/
+
 cp $build_dir/source_modules/hackrf_source/Release/hackrf_source.dll sdrpp_windows_x64/modules/
 cp 'C:/Program Files/PothosSDR/bin/hackrf.dll' sdrpp_windows_x64/
 
@@ -32,12 +35,19 @@ cp $build_dir/source_modules/hermes_source/Release/hermes_source.dll sdrpp_windo
 cp $build_dir/source_modules/limesdr_source/Release/limesdr_source.dll sdrpp_windows_x64/modules/
 cp 'C:/Program Files/PothosSDR/bin/LimeSuite.dll' sdrpp_windows_x64/
 
+cp $build_dir/source_modules/network_source/Release/network_source.dll sdrpp_windows_x64/modules/
+
 cp $build_dir/source_modules/perseus_source/Release/perseus_source.dll sdrpp_windows_x64/modules/
 cp 'C:/Program Files/PothosSDR/bin/perseus-sdr.dll' sdrpp_windows_x64/
 
 cp $build_dir/source_modules/plutosdr_source/Release/plutosdr_source.dll sdrpp_windows_x64/modules/
 cp 'C:/Program Files/PothosSDR/bin/libiio.dll' sdrpp_windows_x64/
 cp 'C:/Program Files/PothosSDR/bin/libad9361.dll' sdrpp_windows_x64/
+
+cp $build_dir/source_modules/rfnm_source/Release/rfnm_source.dll sdrpp_windows_x64/modules/
+cp 'C:/Program Files/RFNM/bin/rfnm.dll' sdrpp_windows_x64/
+cp 'C:/Program Files/RFNM/bin/spdlog.dll' sdrpp_windows_x64/
+cp 'C:/Program Files/RFNM/bin/fmt.dll' sdrpp_windows_x64/
 
 cp $build_dir/source_modules/rfspace_source/Release/rfspace_source.dll sdrpp_windows_x64/modules/
 
@@ -50,8 +60,6 @@ cp $build_dir/source_modules/sdrplay_source/Release/sdrplay_source.dll sdrpp_win
 cp 'C:/Program Files/SDRplay/API/x64/sdrplay_api.dll' sdrpp_windows_x64/ -ErrorAction SilentlyContinue
 
 cp $build_dir/source_modules/sdrpp_server_source/Release/sdrpp_server_source.dll sdrpp_windows_x64/modules/
-
-cp $build_dir/source_modules/soapy_source/Release/soapy_source.dll sdrpp_windows_x64/modules/
 
 cp $build_dir/source_modules/spyserver_source/Release/spyserver_source.dll sdrpp_windows_x64/modules/
 
