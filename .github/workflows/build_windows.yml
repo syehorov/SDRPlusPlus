@@ -1,11 +1,9 @@
-name: Build Binaries
+name: Build Windows Binaries
 
 on:
     push:
-      tags:
-        - "*"
       branches:
-        - "prerelease"
+        - "winbuild"
 
 env:
     # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
