@@ -40,7 +40,7 @@ option(OPT_BUILD_USRP_SOURCE "Build USRP Source Module (libuhd)" ON)
 option(OPT_BUILD_ANDROID_AUDIO_SINK "Build Android Audio Sink Module (Dependencies: AAudio, only for android)" OFF)
 option(OPT_BUILD_AUDIO_SINK "Build Audio Sink Module (Dependencies: rtaudio)" ON)
 option(OPT_BUILD_NETWORK_SINK "Build Audio Sink Module (no dependencies required)" ON)
-option(OPT_BUILD_NEW_PORTAUDIO_SINK "Build the new PortAudio Sink Module (Dependencies: portaudio)" OFF)
+option(OPT_BUILD_NEW_PORTAUDIO_SINK "Build the new PortAudio Sink Module (Dependencies: portaudio)" ON)
 option(OPT_BUILD_PORTAUDIO_SINK "Build PortAudio Sink Module (Dependencies: portaudio)" OFF)
 
 # Decoders
@@ -53,10 +53,10 @@ option(OPT_BUILD_METEOR_DEMODULATOR "Build the meteor demodulator module (no dep
 option(OPT_BUILD_PAGER_DECODER "Build the pager decoder module (no dependencies required)" ON)
 option(OPT_BUILD_RADIO "Main audio modulation decoder (AM, FM, SSB, etc...)" ON)
 option(OPT_BUILD_RYFI_DECODER "RyFi data link decoder" OFF)
-option(OPT_BUILD_WEATHER_SAT_DECODER "Build the HRPT decoder module (no dependencies required)" OFF)
+option(OPT_BUILD_TETRA_DEMODULATOR "Build the TETRA demodulator module (no dependencies required)" ON)
 
 # Misc
-option(OPT_BUILD_DISCORD_PRESENCE "Build the Discord Rich Presence module" ON)
+option(OPT_BUILD_DISCORD_PRESENCE "Build the Discord Rich Presence module" OFF)
 option(OPT_BUILD_FREQUENCY_MANAGER "Build the Frequency Manager module" ON)
 option(OPT_BUILD_IQ_EXPORTER "Build the IQ Exporter module" ON)
 option(OPT_BUILD_RECORDER "Audio and baseband recorder" ON)
@@ -288,6 +288,10 @@ endif (OPT_BUILD_RYFI_DECODER)
 if (OPT_BUILD_WEATHER_SAT_DECODER)
 add_subdirectory("decoder_modules/weather_sat_decoder")
 endif (OPT_BUILD_WEATHER_SAT_DECODER)
+
+if (OPT_BUILD_TETRA_DEMODULATOR)
+add_subdirectory("decoder_modules/tetra_demodulator")
+endif (OPT_BUILD_TETRA_DEMODULATOR)
 
 
 # Misc
