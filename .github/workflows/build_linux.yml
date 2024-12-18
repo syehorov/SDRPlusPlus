@@ -131,6 +131,9 @@ jobs:
         - name: Download All Builds
           uses: actions/download-artifact@v4
 
+        - name: Create Release
+          run: gh release create ${{github.event.release.tag_name}}
+
         - name: Update Release
           run: gh release upload ${{github.event.release.tag_name}} sdrpp_all/* -R ${{github.repository}} --clobber
 
