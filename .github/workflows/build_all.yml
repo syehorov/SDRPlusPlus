@@ -2,13 +2,8 @@ name: Build Binaries
 
 on:
     push:
-        branches-ignore:
-        - nightly
-        - lame_recorder
-    pull_request:
-        branches-ignore:
-        - nightly
-        - lame_recorder
+      tags:
+        - "*"
 
 env:
     # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
@@ -679,10 +674,10 @@ jobs:
             name: sdrpp_all
             path: sdrpp_all/
 
-    update_nightly_release:
+    update_tagged_release:
         needs: [create_full_archive]
         runs-on: ubuntu-latest
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+        if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
 
         steps:
         - name: Download All Builds
