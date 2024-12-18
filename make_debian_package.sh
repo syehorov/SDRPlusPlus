@@ -24,9 +24,6 @@ mkdir -p $ORIG_DIR/sdrpp_${1}_amd64/usr/include/sdrpp_core/src
 mkdir -p $ORIG_DIR/sdrpp_${1}_amd64/usr/share/cmake/Modules
 cd $ORIG_DIR/core/src
 find . -regex ".*\.\(h\|hpp\)" -exec cp --parents \{\} $ORIG_DIR/sdrpp_${1}_amd64/usr/include/sdrpp_core/src \;
-cp $ORIG_DIR/sdrpp_${1}_amd64/usr/include/sdrpp_core/src/imgui/imgui.h $ORIG_DIR/sdrpp_${1}_amd64/usr/include/sdrpp_core/src/
-cp $ORIG_DIR/sdrpp_${1}_amd64/usr/include/sdrpp_core/src/imgui/imconfig.h $ORIG_DIR/sdrpp_${1}_amd64/usr/include/sdrpp_core/src/
-cp $ORIG_DIR/sdrpp_${1}_amd64/usr/include/sdrpp_core/src/imgui/imgui_internal.h $ORIG_DIR/sdrpp_${1}_amd64/usr/include/sdrpp_core/src/
 cp $ORIG_DIR/sdrpp_module.cmake $ORIG_DIR/sdrpp_${1}_amd64/usr/share/cmake/Modules
 
 # Create package
