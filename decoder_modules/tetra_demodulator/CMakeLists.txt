@@ -26,7 +26,7 @@ file(GLOB SRC LIST_DIRECTORIES false
     "src/decoder/codec/c-code/fexp_tet.c"
     "src/decoder/codec/c-code/fmat_tet.c"
     "src/decoder/codec/c-code/tetra_op.c"
-    "src/decoder/codec/c-code/*.h"
+    "src/decoder/codec/c-code/channel.h"
     )
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native")
