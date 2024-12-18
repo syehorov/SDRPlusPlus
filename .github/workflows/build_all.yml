@@ -19,7 +19,7 @@ jobs:
 
         steps:
         - uses: actions/checkout@v4
-        
+
         - name: Create Build Environment
           run: cmake -E make_directory ${{runner.workspace}}/build
 
