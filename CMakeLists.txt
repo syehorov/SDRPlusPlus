@@ -53,7 +53,7 @@ option(OPT_BUILD_METEOR_DEMODULATOR "Build the meteor demodulator module (no dep
 option(OPT_BUILD_PAGER_DECODER "Build the pager decoder module (no dependencies required)" ON)
 option(OPT_BUILD_RADIO "Main audio modulation decoder (AM, FM, SSB, etc...)" ON)
 option(OPT_BUILD_RYFI_DECODER "RyFi data link decoder" OFF)
-option(OPT_BUILD_TETRA_DEMODULATOR "Build the TETRA demodulator module (no dependencies required)" ON)
+option(OPT_BUILD_TETRA_DEMODULATOR "Build the TETRA demodulator module (no dependencies required)" OFF)
 
 # Misc
 option(OPT_BUILD_DISCORD_PRESENCE "Build the Discord Rich Presence module" OFF)
