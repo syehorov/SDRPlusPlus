@@ -52,29 +52,26 @@ cd build
 cmake .. -DOPT_BUILD_BLADERF_SOURCE=ON -DOPT_BUILD_LIMESDR_SOURCE=ON -DOPT_BUILD_SDRPLAY_SOURCE=ON -DOPT_BUILD_NEW_PORTAUDIO_SINK=ON -DOPT_BUILD_M17_DECODER=ON -DOPT_BUILD_PERSEUS_SOURCE=ON -DOPT_BUILD_RFNM_SOURCE=ON -DOPT_BUILD_FOBOSSDR_SOURCE=ON
 make VERBOSE=1 -j2
 
-cd ..
-mkdir sdrpp_debian_amd64
-mkdir sdrpp_debian_amd64/DEBIAN
+mkdir -p /root/SDRPlusPlus/sdrpp_debian_amd64
 
 # Create package info
 echo Create package info
-echo Package: sdrpp >> sdrpp_debian_amd64/DEBIAN/control
-echo Version: 1.2.1$BUILD_NO >> sdrpp_debian_amd64/DEBIAN/control
-echo Maintainer: Serhii Yehorov >> sdrpp_debian_amd64/DEBIAN/control
-echo Architecture: all >> sdrpp_debian_amd64/DEBIAN/control
-echo Description: Bloat-free SDR receiver software >> sdrpp_debian_amd64/DEBIAN/control
-echo Depends: libiio0, libad9361-0, libhackrf0, libairspy0, libairspyhf1, librtaudio7, librtlsdr0, libbladerf2, liblimesuite23.11-1, libuhd4.7.0, libglfw3, sdrplay-api, libsoapysdr0.8 >> sdrpp_debian_amd64/DEBIAN/control
+echo Package: sdrpp >> /root/SDRPlusPlus/sdrpp_debian_amd64/DEBIAN/control
+echo Version: 1.2.1$BUILD_NO >> /root/SDRPlusPlus/sdrpp_debian_amd64/DEBIAN/control
+echo Maintainer: Serhii Yehorov >> /root/SDRPlusPlus/sdrpp_debian_amd64/DEBIAN/control
+echo Architecture: all >> /root/SDRPlusPlus/sdrpp_debian_amd64/DEBIAN/control
+echo Description: Bloat-free SDR receiver software >> /root/SDRPlusPlus/sdrpp_debian_amd64/DEBIAN/control
+echo Depends: libiio0, libad9361-0, libhackrf0, libairspy0, libairspyhf1, librtaudio7, librtlsdr0, libbladerf2, liblimesuite23.11-1, libuhd4.7.0, libglfw3, sdrplay-api, libsoapysdr0.8 >> /root/SDRPlusPlus/sdrpp_debian_amd64/DEBIAN/control
 
 # Copying files
-ORIG_DIR=$PWD
-cd $1
-make install DESTDIR=$ORIG_DIR/sdrpp_debian_amd64
-cd $ORIG_DIR
+cd /root/SDRPlusPlus/build
+make install DESTDIR=/root/SDRPlusPlus/sdrpp_debian_amd64
 
 # Create package
 echo Create package
+cd /root/SDRPlusPlus/
 dpkg-deb --build sdrpp_debian_amd64
 
 # Cleanup
 echo Cleanup
-rm -rf sdrpp_debian_amd64
+rm -rf /root/SDRPlusPlus/sdrpp_debian_amd64
