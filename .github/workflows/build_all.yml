@@ -4,6 +4,8 @@ on:
     push:
       tags:
         - "*"
+      branches:
+        - "prerelease"
 
 env:
     # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
@@ -78,7 +80,7 @@ jobs:
 
         - name: Prepare CMake
           working-directory: ${{runner.workspace}}/build
-          run: cmake -DCOPY_MSVC_REDISTRIBUTABLES=ON "$Env:GITHUB_WORKSPACE" "-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake" "-DLIBUSB_LIBRARIES=C:/Program Files/PothosSDR/lib/libusb-1.0.lib" -DOPT_BUILD_BLADERF_SOURCE=ON -DOPT_BUILD_LIMESDR_SOURCE=ON -DOPT_BUILD_PERSEUS_SOURCE=ON -DOPT_BUILD_SDRPLAY_SOURCE=ON -DOPT_BUILD_NEW_PORTAUDIO_SINK=ON -DOPT_BUILD_M17_DECODER=ON -DOPT_BUILD_RFNM_SOURCE=ON -DOPT_BUILD_FOBOSSDR_SOURCE=ON -DOPT_BUILD_BADGESDR_SOURCE=OFF -DOPT_BUILD_TETRA_DEMODULATOR=OFF
+          run: cmake -DCOPY_MSVC_REDISTRIBUTABLES=ON "$Env:GITHUB_WORKSPACE" "-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake" "-DLIBUSB_LIBRARIES=C:/Program Files/PothosSDR/lib/libusb-1.0.lib" "-DLIBUSB_INCLUDE_DIRS=C:/Program Files/PothosSDR/include/libusb-1.0" -DOPT_BUILD_BLADERF_SOURCE=ON -DOPT_BUILD_LIMESDR_SOURCE=ON -DOPT_BUILD_PERSEUS_SOURCE=ON -DOPT_BUILD_SDRPLAY_SOURCE=ON -DOPT_BUILD_NEW_PORTAUDIO_SINK=ON -DOPT_BUILD_M17_DECODER=ON -DOPT_BUILD_RFNM_SOURCE=ON -DOPT_BUILD_FOBOSSDR_SOURCE=ON -DOPT_BUILD_BADGESDR_SOURCE=OFF -DOPT_BUILD_TETRA_DEMODULATOR=OFF
 
         - name: Build
           working-directory: ${{runner.workspace}}/build
