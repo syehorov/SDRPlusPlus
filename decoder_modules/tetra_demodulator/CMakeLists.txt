@@ -26,14 +26,10 @@ file(GLOB SRC LIST_DIRECTORIES false
     "src/decoder/codec/c-code/fexp_tet.c"
     "src/decoder/codec/c-code/fmat_tet.c"
     "src/decoder/codec/c-code/tetra_op.c"
+    "src/decoder/codec/c-code/*.h"
     )
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native")
-
-if (NOT SDRPP_MODULE_CMAKE)
-    set(SDRPP_MODULE_CMAKE "/usr/share/cmake/Modules/sdrpp_module.cmake")
-endif ()
-
 
 include(${SDRPP_MODULE_CMAKE})
 
