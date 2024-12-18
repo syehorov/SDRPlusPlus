@@ -4,9 +4,11 @@ on:
     push:
         branches-ignore:
         - nightly
+        - lame_recorder
     pull_request:
         branches-ignore:
         - nightly
+        - lame_recorder
 
 env:
     # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
