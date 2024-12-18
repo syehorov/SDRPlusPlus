@@ -132,7 +132,7 @@ jobs:
           uses: actions/download-artifact@v4
 
         - name: Update Release
-          run: gh release upload ${{ github.ref }} sdrpp_all/* -R ${{github.repository}} --clobber
+          run: gh release upload ${{github.event.release.tag_name}} sdrpp_all/* -R ${{github.repository}} --clobber
 
     check_spelling:
         runs-on: ubuntu-latest
