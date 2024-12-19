@@ -66,7 +66,11 @@ echo Depends: libiio0, libad9361-0, libhackrf0, libairspy0, libairspyhf1, librta
 # Copying files
 cd /root/SDRPlusPlus/build
 make install DESTDIR=/root/SDRPlusPlus/sdrpp_debian_amd64
-
+mkdir -p /root/SDRPlusPlus/sdrpp_debian_amd64/usr/include/sdrpp_core/src
+mkdir -p /root/SDRPlusPlus/sdrpp_debian_amd64/usr/share/cmake/Modules
+cd /root/SDRPlusPlus/core/src
+find . -regex ".*\.\(h\|hpp\)" -exec cp --parents \{\} /root/SDRPlusPlus/sdrpp_debian_amd64/usr/include/sdrpp_core/src \;
+cp /root/SDRPlusPlus/sdrpp_module.cmake /root/SDRPlusPlus/sdrpp_debian_amd64/usr/share/cmake/Modules
 # Create package
 echo Create package
 cd /root/SDRPlusPlus/
