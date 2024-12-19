@@ -1,0 +1,264 @@
+name: Build Binaries
+
+on:
+    push:
+      tags:
+        - "*"
+
+env:
+    # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+    BUILD_TYPE: Release
+    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+    build_windows:
+        runs-on: windows-latest
+
+        steps:
+        - uses: actions/checkout@v4
+
+        - name: Create Build Environment
+          run: cmake -E make_directory ${{runner.workspace}}/build
+
+        - name: Download PothosSDR
+          run: Invoke-WebRequest -Uri "https://downloads.myriadrf.org/builds/PothosSDR/PothosSDR-2020.01.26-vc14-x64.exe" -OutFile ${{runner.workspace}}/pothos.exe
+
+        - name: Install PothosSDR
+          run: mkdir "C:/Program Files/PothosSDR" ; 7z x ${{runner.workspace}}/pothos.exe -o"C:/Program Files/PothosSDR/"
+
+        - name: Download libusb
+          run: Invoke-WebRequest -Uri "https://github.com/libusb/libusb/releases/download/v1.0.23/libusb-1.0.23.7z" -OutFile ${{runner.workspace}}/libusb.7z
+
+        - name: Patch Pothos with earlier libusb version
+          working-directory: ${{runner.workspace}}
+          run: 7z x libusb.7z -olibusb_old ; rm "C:/Program Files/PothosSDR/bin/libusb-1.0.dll" ; cp "libusb_old/MS64/dll/libusb-1.0.dll" "C:/Program Files/PothosSDR/bin/" ; rm "C:/Program Files/PothosSDR/lib/libusb-1.0.lib" ; cp "libusb_old/MS64/dll/libusb-1.0.lib" "C:/Program Files/PothosSDR/lib/"
+ 
+        - name: Download librtlsdr
+          run: Invoke-WebRequest -Uri "https://ftp.osmocom.org/binaries/windows/rtl-sdr/rtl-sdr-64bit-20240623.zip" -OutFile ${{runner.workspace}}/rtl-sdr.zip
+
+        - name: Patch Pothos with newer librtlsdr version
+          working-directory: ${{runner.workspace}}
+          run: 7z x rtl-sdr.zip ; rm "C:/Program Files/PothosSDR/bin/rtlsdr.dll" ; cp "rtl-sdr-64bit-20240623/librtlsdr.dll" "C:/Program Files/PothosSDR/bin/rtlsdr.dll"
+
+        - name: Download SDRPlay API
+          run: Invoke-WebRequest -Uri "https://www.sdrpp.org/SDRplay.zip" -OutFile ${{runner.workspace}}/SDRplay.zip
+
+        - name: Install SDRPlay API
+          run: 7z x ${{runner.workspace}}/SDRplay.zip -o"C:/Program Files/"
+
+        - name: Download codec2
+          run: git clone https://github.com/AlexandreRouma/codec2
+
+        - name: Prepare MinGW
+          run: C:/msys64/msys2_shell.cmd -defterm -here -no-start -mingw64 -c "pacman --noconfirm -S --needed base-devel mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja"
+
+        - name: Install vcpkg dependencies
+          run: vcpkg install fftw3:x64-windows glfw3:x64-windows portaudio:x64-windows zstd:x64-windows libusb:x64-windows spdlog:x64-windows itpp:x64-windows boost:x64-windows
+
+        - name: Install rtaudio
+          run: git clone https://github.com/thestk/rtaudio ; cd rtaudio ; git checkout 2f2fca4502d506abc50f6d4473b2836d24cfb1e3 ; mkdir build ; cd build ; cmake .. ; cmake --build . --config Release ; cmake --install .
+
+        - name: Install libperseus-sdr
+          run: git clone https://github.com/AlexandreRouma/libperseus-sdr ; cd libperseus-sdr ; mkdir build ; cd build ; cmake -DCMAKE_BUILD_TYPE=Release "-DLIBUSB_LIBRARIES=C:/Program Files/PothosSDR/lib/libusb-1.0.lib" "-DLIBUSB_INCLUDE_DIRS=C:/Program Files/PothosSDR/include/libusb-1.0" .. "-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake" ; cmake --build . --config Release  ; mkdir "C:/Program Files/PothosSDR/include/perseus-sdr" ; cp Release/perseus-sdr.dll "C:/Program Files/PothosSDR/bin" ; cp Release/perseus-sdr.lib "C:/Program Files/PothosSDR/bin" ; cd .. ; xcopy "src" "C:/Program Files/PothosSDR/include/perseus-sdr"
+
+        - name: Install librfnm
+          run: git clone https://github.com/AlexandreRouma/librfnm ; cd librfnm ; mkdir build ; cd build ; cmake .. -DCMAKE_BUILD_TYPE=Release "-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake" ; cmake --build . --config Release ; cmake --install .
+
+        - name: Install libfobos
+          run: git clone https://github.com/AlexandreRouma/libfobos ; cd libfobos ; mkdir build ; cd build ; cmake .. -DCMAKE_BUILD_TYPE=Release "-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake" ; cmake --build . --config Release ; cmake --install .
+
+        - name: Prepare CMake
+          working-directory: ${{runner.workspace}}/build
+          run: cmake -DCOPY_MSVC_REDISTRIBUTABLES=ON "$Env:GITHUB_WORKSPACE" "-DLIBUSB_LIBRARIES=C:/Program Files/PothosSDR/lib/libusb-1.0.lib" "-DLIBUSB_INCLUDE_DIRS=C:/Program Files/PothosSDR/include/libusb-1.0" "-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DOPT_BUILD_BLADERF_SOURCE=ON -DOPT_BUILD_LIMESDR_SOURCE=ON -DOPT_BUILD_PERSEUS_SOURCE=ON -DOPT_BUILD_SDRPLAY_SOURCE=ON -DOPT_BUILD_NEW_PORTAUDIO_SINK=ON -DOPT_BUILD_RFNM_SOURCE=ON -DOPT_BUILD_FOBOSSDR_SOURCE=ON -DOPT_BUILD_BADGESDR_SOURCE=ON -DOPT_BUILD_TETRA_DEMODULATOR=OFF -DOPT
+
+        - name: Build
+          working-directory: ${{runner.workspace}}/build
+          run: cmake --build . --config Release --verbose
+
+        - name: Create Archive
+          working-directory: ${{runner.workspace}}
+          run: '&($Env:GITHUB_WORKSPACE + "/make_windows_package.ps1") ./build ($Env:GITHUB_WORKSPACE + "/root")'
+
+        - name: Save Archive
+          uses: actions/upload-artifact@v4
+          with:
+              name: sdrpp_windows_x64
+              path: ${{runner.workspace}}/sdrpp_windows_x64.zip
+
+    build_debian_bookworm:
+        runs-on: ubuntu-latest
+
+        steps:
+        - uses: actions/checkout@v4
+        
+        - name: Create Docker Image
+          run: cd $GITHUB_WORKSPACE/docker_builds/debian_bookworm && docker build . --tag sdrpp_build
+
+        - name: Run Container
+          run: docker run --name build -v $GITHUB_WORKSPACE:/root/SDRPlusPlus --env BUILD_NO="-$GITHUB_RUN_NUMBER" sdrpp_build /root/do_build.sh
+
+        - name: Recover Deb Archive
+          working-directory: ${{runner.workspace}}
+          run: docker cp build:/root/SDRPlusPlus/sdrpp_debian_amd64.deb ./sdrpp_debian_bookworm.deb
+
+        - name: Save Deb Archive
+          uses: actions/upload-artifact@v4
+          with:
+              name: sdrpp_debian_bookworm_amd64
+              path: ${{runner.workspace}}/sdrpp_debian_bookworm.deb
+
+    build_debian_sid:
+        runs-on: ubuntu-latest
+
+        steps:
+        - uses: actions/checkout@v4
+        
+        - name: Create Docker Image
+          run: cd $GITHUB_WORKSPACE/docker_builds/debian_sid && docker build . --tag sdrpp_build
+
+        - name: Run Container
+          run: docker run --name build -v $GITHUB_WORKSPACE:/root/SDRPlusPlus --env BUILD_NO="-$GITHUB_RUN_NUMBER" sdrpp_build /root/do_build.sh
+
+        - name: Recover Deb Archive
+          working-directory: ${{runner.workspace}}
+          run: docker cp build:/root/SDRPlusPlus/sdrpp_debian_amd64.deb ./sdrpp_debian_sid_amd64.deb
+
+        - name: Save Deb Archive
+          uses: actions/upload-artifact@v4
+          with:
+              name: sdrpp_debian_sid_amd64
+              path: ${{runner.workspace}}/sdrpp_debian_sid_amd64.deb
+
+
+    build_ubuntu_jammy:
+        runs-on: ubuntu-latest
+
+        steps:
+        - uses: actions/checkout@v4
+        
+        - name: Create Docker Image
+          run: cd $GITHUB_WORKSPACE/docker_builds/ubuntu_jammy && docker build . --tag sdrpp_build
+
+        - name: Run Container
+          run: docker run --name build -v $GITHUB_WORKSPACE:/root/SDRPlusPlus --env BUILD_NO="-$GITHUB_RUN_NUMBER" sdrpp_build /root/do_build.sh
+
+        - name: Recover Deb Archive
+          working-directory: ${{runner.workspace}}
+          run: docker cp build:/root/SDRPlusPlus/sdrpp_debian_amd64.deb ./sdrpp_ubuntu_jammy_amd64.deb
+
+        - name: Save Deb Archive
+          uses: actions/upload-artifact@v4
+          with:
+              name: sdrpp_ubuntu_jammy_amd64
+              path: ${{runner.workspace}}/sdrpp_ubuntu_jammy_amd64.deb
+    
+    build_ubuntu_noble:
+        runs-on: ubuntu-latest
+
+        steps:
+        - uses: actions/checkout@v4
+        
+        - name: Create Docker Image
+          run: cd $GITHUB_WORKSPACE/docker_builds/ubuntu_noble && docker build . --tag sdrpp_build
+
+        - name: Run Container
+          run: docker run --name build -v $GITHUB_WORKSPACE:/root/SDRPlusPlus --env BUILD_NO="-$GITHUB_RUN_NUMBER" sdrpp_build /root/do_build.sh
+
+        - name: Recover Deb Archive
+          working-directory: ${{runner.workspace}}
+          run: docker cp build:/root/SDRPlusPlus/sdrpp_debian_amd64.deb ./sdrpp_ubuntu_noble_amd64.deb
+
+        - name: Save Deb Archive
+          uses: actions/upload-artifact@v4
+          with:
+              name: sdrpp_ubuntu_noble_amd64
+              path: ${{runner.workspace}}/sdrpp_ubuntu_noble_amd64.deb
+
+    create_release:
+        name: Create Release
+        runs-on: ubuntu-latest
+        needs: ['build_debian_bookworm', 'build_debian_sid', 'build_ubuntu_jammy', 'build_ubuntu_noble', 'build_windows']
+        steps:
+          - name: Download All Builds
+            uses: actions/download-artifact@v4
+          - name: Create Release
+            id: create_release
+            uses: actions/create-release@v1
+            env:
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            with:
+              tag_name: ${{ github.ref }}
+              release_name: Release ${{ github.ref }}
+              draft: false
+              prerelease: false
+          - name: Upload Debian Bookworm asset
+            id: upload-release-assets-bookworm
+            uses: actions/upload-release-asset@v1
+            env:
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            with:
+              upload_url: ${{ steps.create_release.outputs.upload_url }}
+              asset_path: sdrpp_debian_bookworm_amd64/sdrpp_debian_bookworm_amd64.deb
+              asset_name: sdrpp_debian_bookworm_amd64.deb
+              asset_content_type: application/dpkg
+          - name: Upload Debian Sid asset
+            id: upload-release-assets-sid
+            uses: actions/upload-release-asset@v1
+            env:
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            with:
+              upload_url: ${{ steps.create_release.outputs.upload_url }}
+              asset_path: sdrpp_debian_sid_amd64/sdrpp_debian_sid_amd64.deb
+              asset_name: sdrpp_debian_sid_amd64.deb
+              asset_content_type: application/dpkg
+          - name: Upload Ubuntu Jammy asset
+            id: upload-release-assets-jammy
+            uses: actions/upload-release-asset@v1
+            env:
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            with:
+              upload_url: ${{ steps.create_release.outputs.upload_url }}
+              asset_path: sdrpp_ubuntu_jammy_amd64/sdrpp_ubuntu_jammy_amd64.deb
+              asset_name: sdrpp_ubuntu_jammy_amd64.deb
+              asset_content_type: application/dpkg
+          - name: Upload Ubuntu Noble asset
+            id: upload-release-assets-noble
+            uses: actions/upload-release-asset@v1
+            env:
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            with:
+              upload_url: ${{ steps.create_release.outputs.upload_url }}
+              asset_path: sdrpp_ubuntu_noble_amd64/sdrpp_ubuntu_noble_amd64.deb
+              asset_name: sdrpp_ubuntu_noble_amd64.deb
+              asset_content_type: application/dpkg
+          - name: Upload Windows asset
+            id: upload-release-assets-windows
+            uses: actions/upload-release-asset@v1
+            env:
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            with:
+              upload_url: ${{ steps.create_release.outputs.upload_url }}
+              asset_path: sdrpp_windows_x64/sdrpp_windows_x64.zip
+              asset_name: sdrpp_windows_x64.zip
+              asset_content_type: application/zip
+
+    check_spelling:
+        runs-on: ubuntu-latest
+
+        steps:
+        - uses: actions/checkout@v4
+
+        - name: Install codespell
+          run: sudo apt update -y && sudo apt install -y codespell
+        
+        - name: Running codespell
+          run: cd $GITHUB_WORKSPACE && codespell -q 2 || true
+
+    check_formatting:
+        runs-on: ubuntu-latest
+
+        steps:
+        - uses: actions/checkout@v4
+        
+        - name: Run check_clang_format
+          run: cd $GITHUB_WORKSPACE && chmod +x ./check_clang_format.sh && ./check_clang_format.sh || true
