@@ -19,6 +19,9 @@ cp 'C:/Program Files/PothosSDR/bin/airspyhf.dll' sdrpp_windows_x64/
 
 cp $build_dir/source_modules/audio_source/Release/audio_source.dll sdrpp_windows_x64/modules/
 
+cp $build_dir/source_modules/badgesdr_source/Release/badgesdr_source.dll sdrpp_windows_x64/modules/
+cp 'C:/Program Files/PothosSDR/bin/libusb-1.0.dll' sdrpp_windows_x64/
+
 cp $build_dir/source_modules/bladerf_source/Release/bladerf_source.dll sdrpp_windows_x64/modules/
 cp 'C:/Program Files/PothosSDR/bin/bladeRF.dll' sdrpp_windows_x64/
 
@@ -61,6 +64,11 @@ cp 'C:/Program Files/SDRplay/API/x64/sdrplay_api.dll' sdrpp_windows_x64/ -ErrorA
 
 cp $build_dir/source_modules/sdrpp_server_source/Release/sdrpp_server_source.dll sdrpp_windows_x64/modules/
 
+cp $build_dir/source_modules/soapy_source/Release/soapy_server_source.dll sdrpp_windows_x64/modules/
+cp 'C:/Program Files/PothosSDR/bin/SoapySDR.dll' sdrpp_windows_x64/
+cp 'C:/Program Files/PothosSDR/bin/SoapyOsmoSDR.dll' sdrpp_windows_x64/
+cp 'C:/Program Files/PothosSDR/bin/osmosdr.dll' sdrpp_windows_x64/
+
 cp $build_dir/source_modules/spyserver_source/Release/spyserver_source.dll sdrpp_windows_x64/modules/
 
 cp $build_dir/source_modules/usrp_source/Release/usrp_source.dll sdrpp_windows_x64/modules/
@@ -74,13 +82,9 @@ cp $build_dir/sink_modules/network_sink/Release/network_sink.dll sdrpp_windows_x
 
 
 # Copy decoder modules
-cp $build_dir/decoder_modules/m17_decoder/Release/m17_decoder.dll sdrpp_windows_x64/modules/
-cp "C:/Program Files/codec2/lib/libcodec2.dll" sdrpp_windows_x64/
-
-cp $build_dir/decoder_modules/meteor_demodulator/Release/meteor_demodulator.dll sdrpp_windows_x64/modules/
-
 cp $build_dir/decoder_modules/radio/Release/radio.dll sdrpp_windows_x64/modules/
 
+cp $build_dir/decoder_modules/vhfvoiceradio/Release/vhfvoiceradio.dll sdrpp_windows_x64/modules/
 
 # Copy misc modules
 cp $build_dir/misc_modules/frequency_manager/Release/frequency_manager.dll sdrpp_windows_x64/modules/
@@ -95,6 +99,7 @@ cp $build_dir/misc_modules/rigctl_server/Release/rigctl_server.dll sdrpp_windows
 
 cp $build_dir/misc_modules/scanner/Release/scanner.dll sdrpp_windows_x64/modules/
 
+cp $build_dir/misc_modules/scheduler/Release/scheduler.dll sdrpp_windows_x64/modules/
 
 # Copy supporting libs
 cp 'C:/Program Files/PothosSDR/bin/libusb-1.0.dll' sdrpp_windows_x64/
