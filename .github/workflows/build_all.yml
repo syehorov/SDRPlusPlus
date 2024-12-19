@@ -179,7 +179,7 @@ jobs:
               asset_name: sdrpp_ubuntu_noble_amd64.deb
               asset_content_type: application/dpkg
           - name: Upload Ubuntu Oracular asset
-            id: upload-release-assets-noble
+            id: upload-release-assets-oracular
             uses: actions/upload-release-asset@v1
             env:
               GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
