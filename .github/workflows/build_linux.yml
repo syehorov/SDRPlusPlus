@@ -100,39 +100,74 @@ jobs:
               name: sdrpp_ubuntu_noble_amd64
               path: ${{runner.workspace}}/sdrpp_debian_amd64.deb
 
-
-    create_full_archive:
+    create_release:
+        name: Create Release
+        runs-on: ubuntu-latest
         needs: ['build_debian_bookworm', 'build_debian_sid', 'build_ubuntu_jammy', 'build_ubuntu_noble']
-        runs-on: ubuntu-latest
-
         steps:
-        - name: Download All Builds
-          uses: actions/download-artifact@v4
-
-        - name: Create Archive
-          run: >
-            mkdir sdrpp_all && 
-            mv sdrpp_debian_bookworm_amd64/sdrpp_debian_amd64.deb sdrpp_all/sdrpp_debian_bookworm_amd64.deb && 
-            mv sdrpp_debian_sid_amd64/sdrpp_debian_amd64.deb sdrpp_all/sdrpp_debian_sid_amd64.deb && 
-            mv sdrpp_ubuntu_jammy_amd64/sdrpp_debian_amd64.deb sdrpp_all/sdrpp_ubuntu_jammy_amd64.deb &&
-            mv sdrpp_ubuntu_noble_amd64/sdrpp_debian_amd64.deb sdrpp_all/sdrpp_ubuntu_noble_amd64.deb
-
-        - uses: actions/upload-artifact@v4
-          with:
-            name: sdrpp_all
-            path: sdrpp_all/
-
-    update_tagged_release:
-        needs: [create_full_archive]
-        runs-on: ubuntu-latest
-        if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
-
-        steps:
-        - name: Download All Builds
-          uses: actions/download-artifact@v4
-
-        - name: Create Release
-          run: gh release create v1.2.1 sdrpp_all/*
+          - name: Download All Builds
+            uses: actions/download-artifact@v4
+          - name: Create Archive
+            run: >
+              mkdir sdrpp_all && 
+              mv sdrpp_debian_bookworm_amd64/sdrpp_debian_amd64.deb sdrpp_all/sdrpp_debian_bookworm_amd64.deb && 
+              mv sdrpp_debian_sid_amd64/sdrpp_debian_amd64.deb sdrpp_all/sdrpp_debian_sid_amd64.deb && 
+              mv sdrpp_ubuntu_jammy_amd64/sdrpp_debian_amd64.deb sdrpp_all/sdrpp_ubuntu_jammy_amd64.deb &&
+              mv sdrpp_ubuntu_noble_amd64/sdrpp_debian_amd64.deb sdrpp_all/sdrpp_ubuntu_noble_amd64.deb
+          - uses: actions/upload-artifact@v4
+            with:
+              name: sdrpp_all
+              path: sdrpp_all/
+          - name: Create Release
+            id: create_release
+            uses: actions/create-release@v1
+            env:
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            with:
+              tag_name: ${{ github.ref }}
+              release_name: Release ${{ github.ref }}
+              draft: false
+              prerelease: false
+          - name: Upload Debian Bookworm asset
+            id: upload-release-assets-bookworm
+            uses: actions/upload-release-asset@v1
+            env:
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            with:
+              upload_url: ${{ steps.create_release.outputs.upload_url }}
+              asset_path: sdrpp_all/sdrpp_debian_bookworm_amd64.deb
+              asset_name: sdrpp_debian_bookworm_amd64.deb
+              asset_content_type: application/dpkg
+          - name: Upload Debian Sid asset
+            id: upload-release-assets-sid
+            uses: actions/upload-release-asset@v1
+            env:
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            with:
+              upload_url: ${{ steps.create_release.outputs.upload_url }}
+              asset_path: sdrpp_all/sdrpp_debian_sid_amd64.deb
+              asset_name: sdrpp_debian_sid_amd64.deb
+              asset_content_type: application/dpkg
+          - name: Upload Ubuntu Jammy asset
+            id: upload-release-assets-jammy
+            uses: actions/upload-release-asset@v1
+            env:
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            with:
+              upload_url: ${{ steps.create_release.outputs.upload_url }}
+              asset_path: sdrpp_all/sdrpp_ubuntu_jammy_amd64.deb
+              asset_name: sdrpp_ubuntu_jammy_amd64.deb
+              asset_content_type: application/dpkg
+          - name: Upload Ubuntu Noble asset
+            id: upload-release-assets-noble
+            uses: actions/upload-release-asset@v1
+            env:
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            with:
+              upload_url: ${{ steps.create_release.outputs.upload_url }}
+              asset_path: sdrpp_all/sdrpp_ubuntu_noble_amd64.deb
+              asset_name: sdrpp_ubuntu_noble_amd64.deb
+              asset_content_type: application/dpkg
 
     check_spelling:
         runs-on: ubuntu-latest
