@@ -7,7 +7,7 @@ include(${SDRPP_MODULE_CMAKE})
 
 if (MSVC)
     # Lib path
-    target_link_directories(usrp_source PRIVATE "C:/Program Files/PothosSDR/bin/")
+    target_link_directories(usrp_source PRIVATE "C:/Program Files/PothosSDR/bin/" "C:/Program Files/PothosSDR/lib/")
 
     target_include_directories(usrp_source PRIVATE "C:/Program Files/PothosSDR/include/")
 
