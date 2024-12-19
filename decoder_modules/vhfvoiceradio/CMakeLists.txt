@@ -8,6 +8,11 @@ file(GLOB_RECURSE SRC "src/*.cpp" "src/*.h" "src/*.hpp" "src/*.c" "mbelib/*.c")
 
 find_package(ITPP REQUIRED)
 
+if(MSVC)
+    # needed for M_PI macro
+    add_definitions(-D_USE_MATH_DEFINES)
+endif()
+
 if (NOT SDRPP_MODULE_CMAKE)
     set(SDRPP_MODULE_CMAKE "/usr/share/cmake/Modules/sdrpp_module.cmake")
 endif ()
