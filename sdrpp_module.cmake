@@ -1,6 +1,6 @@
 # Get needed values depending on if this is in-tree or out-of-tree
 if (NOT SDRPP_CORE_ROOT)
-    set(SDRPP_CORE_ROOT "/usr/include/sdrpp_core")
+    set(SDRPP_CORE_ROOT "/usr/include/sdrpp_core/src/")
 endif ()
 if (NOT SDRPP_MODULE_COMPILER_FLAGS)
     # Compiler flags
@@ -28,7 +28,7 @@ endif ()
 # Created shared lib and link to core
 add_library(${PROJECT_NAME} SHARED ${SRC})
 target_link_libraries(${PROJECT_NAME} PRIVATE sdrpp_core)
-target_include_directories(${PROJECT_NAME} PRIVATE "${SDRPP_CORE_ROOT}/src/")
+target_include_directories(${PROJECT_NAME} PRIVATE "${SDRPP_CORE_ROOT}")
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 
 # Set compile arguments
