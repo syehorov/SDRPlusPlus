@@ -2,7 +2,7 @@
 if (NOT SDRPP_CORE_ROOT)
     set(SDRPP_CORE_ROOT "/usr/include/sdrpp_core/src/")
 endif ()
-if (NOT SDRPP_MODULE_COMPILER_FLAGS)
+if (NOT SDRPP_COMPILER_FLAGS)
     # Compiler flags
     if (${CMAKE_BUILD_TYPE} MATCHES "Debug")
         # Debug Flags
@@ -32,7 +32,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE "${SDRPP_CORE_ROOT}")
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 
 # Set compile arguments
-target_compile_options(${PROJECT_NAME} PRIVATE ${SDRPP_MODULE_COMPILER_FLAGS})
+target_compile_options(${PROJECT_NAME} PRIVATE ${SDRPP_COMPILER_FLAGS})
 
 # Install directives
 install(TARGETS ${PROJECT_NAME} DESTINATION lib/sdrpp/plugins)

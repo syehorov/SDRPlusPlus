@@ -11,7 +11,6 @@ find_package(ITPP REQUIRED)
 if(MSVC)
     # needed for M_PI macro
     add_definitions(-D_USE_MATH_DEFINES)
-    set(CMAKE_CXX_FLAGS /O2 /Ob2 /std:c++17 /EHsc)
 endif()
 
 if (NOT SDRPP_MODULE_CMAKE)
