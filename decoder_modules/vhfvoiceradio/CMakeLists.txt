@@ -11,11 +11,7 @@ find_package(ITPP REQUIRED)
 if(MSVC)
     # needed for M_PI macro
     add_definitions(-D_USE_MATH_DEFINES)
-    set_property(TARGET ${PROJECT_NAME}
-    PROPERTY
-      # Enable C++17 standard compliance
-      CXX_STANDARD 17
-    )  
+    target_compile_features(vhfvoiceradio PRIVATE cxx_std_17)
 endif()
 
 if (NOT SDRPP_MODULE_CMAKE)
