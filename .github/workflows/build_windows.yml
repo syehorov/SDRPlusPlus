@@ -19,37 +19,11 @@ jobs:
         - name: Create Build Environment
           run: cmake -E make_directory ${{runner.workspace}}/build
 
-        - name: Download PothosSDR
-          run: Invoke-WebRequest -Uri "https://downloads.myriadrf.org/builds/PothosSDR/PothosSDR-2020.01.26-vc14-x64.exe" -OutFile ${{runner.workspace}}/pothos.exe
+        - name: Download build toolkit
+          run: Invoke-WebRequest -Uri "https://airsoft.ua/apt/build-toolkit.tar.7z" -OutFile ${{runner.workspace}}/build-toolkit.tar.7z
 
-        - name: Install PothosSDR
-          run: mkdir "C:/Program Files/PothosSDR" ; 7z x ${{runner.workspace}}/pothos.exe -o"C:/Program Files/PothosSDR/"
-
-        - name: Download libusb
-          run: Invoke-WebRequest -Uri "https://github.com/libusb/libusb/releases/download/v1.0.23/libusb-1.0.23.7z" -OutFile ${{runner.workspace}}/libusb.7z
-
-        - name: Patch Pothos with earlier libusb version
-          working-directory: ${{runner.workspace}}
-          run: 7z x libusb.7z -olibusb_old ; rm "C:/Program Files/PothosSDR/bin/libusb-1.0.dll" ; cp "libusb_old/MS64/dll/libusb-1.0.dll" "C:/Program Files/PothosSDR/bin/" ; rm "C:/Program Files/PothosSDR/lib/libusb-1.0.lib" ; cp "libusb_old/MS64/dll/libusb-1.0.lib" "C:/Program Files/PothosSDR/lib/"
- 
-        - name: Download librtlsdr
-          run: Invoke-WebRequest -Uri "https://ftp.osmocom.org/binaries/windows/rtl-sdr/rtl-sdr-64bit-20240623.zip" -OutFile ${{runner.workspace}}/rtl-sdr.zip
-
-        - name: Patch Pothos with newer librtlsdr version
-          working-directory: ${{runner.workspace}}
-          run: 7z x rtl-sdr.zip ; rm "C:/Program Files/PothosSDR/bin/rtlsdr.dll" ; cp "rtl-sdr-64bit-20240623/librtlsdr.dll" "C:/Program Files/PothosSDR/bin/rtlsdr.dll"
-
-        - name: Download SDRPlay API
-          run: Invoke-WebRequest -Uri "https://www.sdrpp.org/SDRplay.zip" -OutFile ${{runner.workspace}}/SDRplay.zip
-
-        - name: Install SDRPlay API
-          run: 7z x ${{runner.workspace}}/SDRplay.zip -o"C:/Program Files/"
-        
-        - name: Download Boost
-          run: Invoke-WebRequest -Uri "https://pilotfiber.dl.sourceforge.net/project/boost/boost-binaries/1.87.0/boost_1_87_0-bin-msvc-all-32-64.7z?viasf=1" -OutFile ${{runner.workspace}}/boost_1_87_0-bin-msvc-all-32-64.7z
-
-        - name: Install Boost
-          run: 7z x ${{runner.workspace}}/boost_1_87_0-bin-msvc-all-32-64.7z -o"C:/"; cp -r "C:/boost_1_87_0/boost" "C:/Program Files/PothosSDR/include/"; cp -r "C:/boost_1_87_0/lib64-msvc-14.3/*.*"  "C:/Program Files/PothosSDR/lib/"; cp -r "C:/boost_1_87_0/lib64-msvc-14.3/*.*"  "C:/Program Files/PothosSDR/bin/"
+        - name: Install build toolkit
+          run: 7z x ${{runner.workspace}}/build-toolkit.tar.7z -o"C:/"
 
         - name: Prepare MinGW
           run: C:/msys64/msys2_shell.cmd -defterm -here -no-start -mingw64 -c "pacman --noconfirm -S --needed base-devel mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja"
@@ -61,7 +35,7 @@ jobs:
           run: git clone https://github.com/thestk/rtaudio ; cd rtaudio ; git checkout 2f2fca4502d506abc50f6d4473b2836d24cfb1e3 ; mkdir build ; cd build ; cmake .. ; cmake --build . --config Release ; cmake --install .
 
         - name: Install libperseus-sdr
-          run: git clone https://github.com/AlexandreRouma/libperseus-sdr ; cd libperseus-sdr ; mkdir build ; cd build ; cmake -DCMAKE_BUILD_TYPE=Release "-DLIBUSB_LIBRARIES=C:/Program Files/PothosSDR/lib/libusb-1.0.lib" "-DLIBUSB_INCLUDE_DIRS=C:/Program Files/PothosSDR/include/libusb-1.0" .. "-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake" ; cmake --build . --config Release  ; mkdir "C:/Program Files/PothosSDR/include/perseus-sdr" ; cp Release/perseus-sdr.dll "C:/Program Files/PothosSDR/bin" ; cp Release/perseus-sdr.lib "C:/Program Files/PothosSDR/bin" ; cd .. ; xcopy "src" "C:/Program Files/PothosSDR/include/perseus-sdr"
+          run: git clone https://github.com/AlexandreRouma/libperseus-sdr ; cd libperseus-sdr ; mkdir build ; cd build ; cmake -DCMAKE_BUILD_TYPE=Release "-DLIBUSB_LIBRARIES=C:/build-toolkit/PothosSDR/lib/libusb-1.0.lib" "-DLIBUSB_INCLUDE_DIRS=C:/build-toolkit/PothosSDR/include/libusb-1.0" .. "-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake" ; cmake --build . --config Release  ; mkdir "C:/build-toolkit/PothosSDR/include/perseus-sdr" ; cp Release/perseus-sdr.dll "C:/build-toolkit/PothosSDR/bin" ; cp Release/perseus-sdr.lib "C:/build-toolkit/PothosSDR/bin" ; cd .. ; xcopy "src" "C:/build-toolkit/PothosSDR/include/perseus-sdr"
 
         - name: Install librfnm
           run: git clone https://github.com/AlexandreRouma/librfnm ; cd librfnm ; mkdir build ; cd build ; cmake .. -DCMAKE_BUILD_TYPE=Release "-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake" ; cmake --build . --config Release ; cmake --install .
@@ -71,7 +45,7 @@ jobs:
 
         - name: Prepare CMake
           working-directory: ${{runner.workspace}}/build
-          run: cmake -DCOPY_MSVC_REDISTRIBUTABLES=ON "$Env:GITHUB_WORKSPACE" "-DLIBUSB_LIBRARIES=C:/Program Files/PothosSDR/lib/libusb-1.0.lib" "-DLIBUSB_INCLUDE_DIRS=C:/Program Files/PothosSDR/include/libusb-1.0" "-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DOPT_BUILD_TETRA_DEMODULATOR=OFF
+          run: cmake -DCOPY_MSVC_REDISTRIBUTABLES=ON "$Env:GITHUB_WORKSPACE" "-DLIBUSB_LIBRARIES=C:/build-toolkit/PothosSDR/lib/libusb-1.0.lib" "-DLIBUSB_INCLUDE_DIRS=C:/build-toolkit/PothosSDR/include/libusb-1.0" "-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DOPT_BUILD_TETRA_DEMODULATOR=OFF
 
         - name: Build
           working-directory: ${{runner.workspace}}/build
