@@ -81,7 +81,7 @@ set(SDRPP_CORE_ROOT "${CMAKE_SOURCE_DIR}/core/src/")
 if (${CMAKE_BUILD_TYPE} MATCHES "Debug")
     # Debug Flags
     if (MSVC)
-        set(SDRPP_COMPILER_FLAGS /std:c++17 /EHsc)
+        set(SDRPP_COMPILER_FLAGS /std:c++latest /std:clatest /EHsc)
     elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         set(SDRPP_COMPILER_FLAGS -g -Og -std=c++17 -Wno-unused-command-line-argument -undefined dynamic_lookup)
     else ()
@@ -90,7 +90,7 @@ if (${CMAKE_BUILD_TYPE} MATCHES "Debug")
 else()
     # Normal Flags
     if (MSVC)
-        set(SDRPP_COMPILER_FLAGS /O2 /Ob2 /std:c++17 /EHsc)
+        set(SDRPP_COMPILER_FLAGS /O2 /Ob2 /std:c++latest /std:clatest /EHsc)
     elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         set(SDRPP_COMPILER_FLAGS -O3 -std=c++17 -Wno-unused-command-line-argument -undefined dynamic_lookup)
     else ()
@@ -380,8 +380,6 @@ endif ()
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     add_custom_target(do_always ALL cp \"$<TARGET_FILE_DIR:sdrpp_core>/libsdrpp_core.dylib\" \"$<TARGET_FILE_DIR:sdrpp>\")
 endif ()
-
-# cmake .. "-DCMAKE_TOOLCHAIN_FILE=C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake" -DOPT_BUILD_BLADERF_SOURCE=ON -DOPT_BUILD_LIMESDR_SOURCE=ON -DOPT_BUILD_SDRPLAY_SOURCE=ON -DOPT_BUILD_M17_DECODER=ON -DOPT_BUILD_SCANNER=ON -DOPT_BUILD_SCHEDULER=ON -DOPT_BUILD_USRP_SOURCE=ON -DOPT_BUILD_PAGER_DECODER=ON
 
 # Create module cmake file
 configure_file(${CMAKE_SOURCE_DIR}/sdrpp_module.cmake ${CMAKE_CURRENT_BINARY_DIR}/sdrpp_module.cmake @ONLY)
