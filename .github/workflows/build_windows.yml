@@ -20,7 +20,7 @@ jobs:
           run: cmake -E make_directory ${{runner.workspace}}/build
 
         - name: Download build toolkit
-          run: Invoke-WebRequest -Uri "PothosSDR.tar.7z" -OutFile ${{runner.workspace}}/PothosSDR.tar.7z
+          run: Invoke-WebRequest -Uri "https://airsoft.ua/apt/PothosSDR.tar.7z" -OutFile ${{runner.workspace}}/PothosSDR.tar.7z
 
         - name: Install build toolkit
           run: 7z x ${{runner.workspace}}/PothosSDR.tar.7z -o"C:/Program Files"
