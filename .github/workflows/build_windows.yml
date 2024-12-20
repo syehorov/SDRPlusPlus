@@ -20,10 +20,10 @@ jobs:
           run: cmake -E make_directory ${{runner.workspace}}/build
 
         - name: Download build toolkit
-          run: Invoke-WebRequest -Uri "https://airsoft.ua/apt/build-toolkit.tar.7z" -OutFile ${{runner.workspace}}/build-toolkit.tar.7z
+          run: Invoke-WebRequest -Uri "PothosSDR.tar.7z" -OutFile ${{runner.workspace}}/PothosSDR.tar.7z
 
         - name: Install build toolkit
-          run: 7z x ${{runner.workspace}}/build-toolkit.tar.7z -o"C:/"
+          run: 7z x ${{runner.workspace}}/PothosSDR.tar.7z -o"C:/Program Files"
 
         - name: Prepare MinGW
           run: C:/msys64/msys2_shell.cmd -defterm -here -no-start -mingw64 -c "pacman --noconfirm -S --needed base-devel mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja"
@@ -31,11 +31,20 @@ jobs:
         - name: Install vcpkg dependencies
           run: vcpkg install fftw3:x64-windows glfw3:x64-windows portaudio:x64-windows zstd:x64-windows libusb:x64-windows spdlog:x64-windows itpp:x64-windows
 
+        - name: Backup vcpkg
+          run: 7z a ${{runner.workspace}}/vcpkg.7z "C:/vcpkg"
+        
+        - name: Save vcpkg
+          uses: actions/upload-artifact@v4
+          with:
+              name: vcpkg.7z
+              path: ${{runner.workspace}}/vcpkg.7z
+
         - name: Install rtaudio
           run: git clone https://github.com/thestk/rtaudio ; cd rtaudio ; git checkout 2f2fca4502d506abc50f6d4473b2836d24cfb1e3 ; mkdir build ; cd build ; cmake .. ; cmake --build . --config Release ; cmake --install .
 
         - name: Install libperseus-sdr
-          run: git clone https://github.com/AlexandreRouma/libperseus-sdr ; cd libperseus-sdr ; mkdir build ; cd build ; cmake -DCMAKE_BUILD_TYPE=Release "-DLIBUSB_LIBRARIES=C:/build-toolkit/PothosSDR/lib/libusb-1.0.lib" "-DLIBUSB_INCLUDE_DIRS=C:/build-toolkit/PothosSDR/include/libusb-1.0" .. "-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake" ; cmake --build . --config Release  ; mkdir "C:/build-toolkit/PothosSDR/include/perseus-sdr" ; cp Release/perseus-sdr.dll "C:/build-toolkit/PothosSDR/bin" ; cp Release/perseus-sdr.lib "C:/build-toolkit/PothosSDR/bin" ; cd .. ; xcopy "src" "C:/build-toolkit/PothosSDR/include/perseus-sdr"
+          run: git clone https://github.com/AlexandreRouma/libperseus-sdr ; cd libperseus-sdr ; mkdir build ; cd build ; cmake -DCMAKE_BUILD_TYPE=Release "-DLIBUSB_LIBRARIES=C:/Program Files/PothosSDR/lib/libusb-1.0.lib" "-DLIBUSB_INCLUDE_DIRS=C:/Program Files/PothosSDR/include/libusb-1.0" .. "-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake" ; cmake --build . --config Release  ; mkdir "C:/Program Files/PothosSDR/include/perseus-sdr" ; cp Release/perseus-sdr.dll "C:/Program Files/PothosSDR/bin" ; cp Release/perseus-sdr.lib "C:/Program Files/PothosSDR/bin" ; cd .. ; xcopy "src" "C:/Program Files/PothosSDR/include/perseus-sdr"
 
         - name: Install librfnm
           run: git clone https://github.com/AlexandreRouma/librfnm ; cd librfnm ; mkdir build ; cd build ; cmake .. -DCMAKE_BUILD_TYPE=Release "-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake" ; cmake --build . --config Release ; cmake --install .
@@ -45,7 +54,7 @@ jobs:
 
         - name: Prepare CMake
           working-directory: ${{runner.workspace}}/build
-          run: cmake -DCOPY_MSVC_REDISTRIBUTABLES=ON "$Env:GITHUB_WORKSPACE" "-DLIBUSB_LIBRARIES=C:/build-toolkit/PothosSDR/lib/libusb-1.0.lib" "-DLIBUSB_INCLUDE_DIRS=C:/build-toolkit/PothosSDR/include/libusb-1.0" "-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DOPT_BUILD_TETRA_DEMODULATOR=OFF
+          run: cmake -DCOPY_MSVC_REDISTRIBUTABLES=ON "$Env:GITHUB_WORKSPACE" "-DLIBUSB_LIBRARIES=C:/Program Files/PothosSDR/lib/libusb-1.0.lib" "-DLIBUSB_INCLUDE_DIRS=C:/Program Files/PothosSDR/include/libusb-1.0" "-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DOPT_BUILD_TETRA_DEMODULATOR=OFF
 
         - name: Build
           working-directory: ${{runner.workspace}}/build
