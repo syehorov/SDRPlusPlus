@@ -1,7 +1,7 @@
 #!/bin/sh
 
-URL=http://www.etsi.org/deliver/etsi_en/300300_300399/30039502/01.03.01_60/en_30039502v010301p0.zip
-MD5_EXP=a8115fe68ef8f8cc466f4192572a1e3e
+URL=https://www.etsi.org/deliver/etsi_en/300300_300399/30039502/01.03.02_20/en_30039502v010302a0.zip
+MD5_EXP=903c94be747d9ad1185485fdc7b6b0a6
 LOCAL_FILE=etsi_tetra_codec.zip
 
 PATCHDIR=`pwd`
@@ -41,5 +41,8 @@ for p in `cat "$PATCHDIR/series"`; do
 	echo "=> Applying patch '$PATCHDIR/$p'..."
 	patch -p1 < "$PATCHDIR/$p"
 done
+
+echo Remove documentation ...
+rm -rf ${CODECDIR}/c-word
 
 echo Done!
