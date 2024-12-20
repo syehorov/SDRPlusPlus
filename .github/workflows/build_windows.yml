@@ -19,26 +19,34 @@ jobs:
         - name: Create Build Environment
           run: cmake -E make_directory ${{runner.workspace}}/build
 
-        - name: Download build toolkit
-          run: Invoke-WebRequest -Uri "https://airsoft.ua/apt/PothosSDR.tar.7z" -OutFile ${{runner.workspace}}/PothosSDR.tar.7z
+        - name: Download PothosSDR
+          run: Invoke-WebRequest -Uri "https://downloads.myriadrf.org/builds/PothosSDR/PothosSDR-2020.01.26-vc14-x64.exe" -OutFile ${{runner.workspace}}/pothos.exe
 
-        - name: Install build toolkit
-          run: 7z x ${{runner.workspace}}/PothosSDR.tar.7z -o"C:/Program Files"
+        - name: Install PothosSDR
+          run: mkdir "C:/Program Files/PothosSDR" ; 7z x ${{runner.workspace}}/pothos.exe -o"C:/Program Files/PothosSDR/"
 
-        - name: Prepare MinGW
-          run: C:/msys64/msys2_shell.cmd -defterm -here -no-start -mingw64 -c "pacman --noconfirm -S --needed base-devel mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja"
+        - name: Download libusb
+          run: Invoke-WebRequest -Uri "https://github.com/libusb/libusb/releases/download/v1.0.23/libusb-1.0.23.7z" -OutFile ${{runner.workspace}}/libusb.7z
+
+        - name: Patch Pothos with earlier libusb version
+          working-directory: ${{runner.workspace}}
+          run: 7z x libusb.7z -olibusb_old ; rm "C:/Program Files/PothosSDR/bin/libusb-1.0.dll" ; cp "libusb_old/MS64/dll/libusb-1.0.dll" "C:/Program Files/PothosSDR/bin/" ; rm "C:/Program Files/PothosSDR/lib/libusb-1.0.lib" ; cp "libusb_old/MS64/dll/libusb-1.0.lib" "C:/Program Files/PothosSDR/lib/"
+ 
+        - name: Download librtlsdr
+          run: Invoke-WebRequest -Uri "https://ftp.osmocom.org/binaries/windows/rtl-sdr/rtl-sdr-64bit-20240623.zip" -OutFile ${{runner.workspace}}/rtl-sdr.zip
+
+        - name: Patch Pothos with newer librtlsdr version
+          working-directory: ${{runner.workspace}}
+          run: 7z x rtl-sdr.zip ; rm "C:/Program Files/PothosSDR/bin/rtlsdr.dll" ; cp "rtl-sdr-64bit-20240623/librtlsdr.dll" "C:/Program Files/PothosSDR/bin/rtlsdr.dll"
+
+        - name: Download SDRPlay API
+          run: Invoke-WebRequest -Uri "https://www.sdrpp.org/SDRplay.zip" -OutFile ${{runner.workspace}}/SDRplay.zip
+
+        - name: Install SDRPlay API
+          run: 7z x ${{runner.workspace}}/SDRplay.zip -o"C:/Program Files/"
 
         - name: Install vcpkg dependencies
-          run: vcpkg install fftw3:x64-windows glfw3:x64-windows portaudio:x64-windows zstd:x64-windows libusb:x64-windows spdlog:x64-windows itpp:x64-windows
-
-        - name: Backup vcpkg
-          run: 7z a ${{runner.workspace}}/vcpkg.7z "C:/vcpkg"
-        
-        - name: Save vcpkg
-          uses: actions/upload-artifact@v4
-          with:
-              name: vcpkg.7z
-              path: ${{runner.workspace}}/vcpkg.7z
+          run: vcpkg install fftw3:x64-windows glfw3:x64-windows portaudio:x64-windows zstd:x64-windows libusb:x64-windows spdlog:x64-windows itpp:x64-windows boost-assert:x64-windows boost-concept-check:x64-windows boost-config:x64-windows boost-container-hash:x64-windows boost-container:x64-windows boost-core:x64-windows boost-date-time:x64-windows boost-describe:x64-windows boost-detail:x64-windows boost-exception:x64-windows boost-format:x64-windows boost-functional:x64-windows boost-graph:x64-windows boost-iterator:x64-windows boost-lexical-cast:x64-windows boost-move:x64-windows boost-mp11:x64-windows boost-mpl:x64-windows boost-multi-index:x64-windows boost-numeric-conversion:x64-windows boost-optional:x64-windows boost-preprocessor:x64-windows boost-property-map:x64-windows boost-range:x64-windows boost-smart-ptr:x64-windows boost-tuple:x64-windows boost-typeof:x64-windows boost-type-traits:x64-windows boost-units:x64-windows boost-unordered:x64-windows boost-utility:x64-windows
 
         - name: Install rtaudio
           run: git clone https://github.com/thestk/rtaudio ; cd rtaudio ; git checkout 2f2fca4502d506abc50f6d4473b2836d24cfb1e3 ; mkdir build ; cd build ; cmake .. ; cmake --build . --config Release ; cmake --install .
