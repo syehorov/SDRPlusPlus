@@ -10,7 +10,7 @@ find_package(ITPP REQUIRED)
 
 if(MSVC)
     # needed for M_PI macro
-    add_definitions(-D_USE_MATH_DEFINES)
+    add_definitions(-D_USE_MATH_DEFINES -D_CRT_SECURE_NO_WARNINGS)
 endif()
 
 if (NOT SDRPP_MODULE_CMAKE)
