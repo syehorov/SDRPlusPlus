@@ -25,13 +25,13 @@ jobs:
 
         - name: Recover Deb Archive
           working-directory: ${{runner.workspace}}
-          run: docker cp build:/root/SDRPlusPlus/sdrpp_debian_amd64.deb ./sdrpp_debian_bookworm.deb
+          run: docker cp build:/root/SDRPlusPlus/sdrpp_debian_amd64.deb ./
 
         - name: Save Deb Archive
           uses: actions/upload-artifact@v4
           with:
               name: sdrpp_debian_bookworm_amd64
-              path: ${{runner.workspace}}/sdrpp_debian_bookworm.deb
+              path: ${{runner.workspace}}/sdrpp_debian_amd64.deb
 
     build_debian_sid:
         runs-on: ubuntu-latest
@@ -69,13 +69,13 @@ jobs:
 
         - name: Recover Deb Archive
           working-directory: ${{runner.workspace}}
-          run: docker cp build:/root/SDRPlusPlus/sdrpp_debian_amd64.deb ./sdrpp_ubuntu_jammy_amd64.deb
+          run: docker cp build:/root/SDRPlusPlus/sdrpp_debian_amd64.deb ./
 
         - name: Save Deb Archive
           uses: actions/upload-artifact@v4
           with:
               name: sdrpp_ubuntu_jammy_amd64
-              path: ${{runner.workspace}}/sdrpp_ubuntu_jammy_amd64.deb
+              path: ${{runner.workspace}}/sdrpp_debian_amd64.deb
     
     build_ubuntu_noble:
         runs-on: ubuntu-latest
@@ -91,13 +91,13 @@ jobs:
 
         - name: Recover Deb Archive
           working-directory: ${{runner.workspace}}
-          run: docker cp build:/root/SDRPlusPlus/sdrpp_debian_amd64.deb ./sdrpp_ubuntu_noble_amd64.deb
+          run: docker cp build:/root/SDRPlusPlus/sdrpp_debian_amd64.deb ./
 
         - name: Save Deb Archive
           uses: actions/upload-artifact@v4
           with:
               name: sdrpp_ubuntu_noble_amd64
-              path: ${{runner.workspace}}/sdrpp_ubuntu_noble_amd64.deb
+              path: ${{runner.workspace}}/sdrpp_debian_amd64.deb
 
     build_ubuntu_oracular:
         runs-on: ubuntu-latest
@@ -113,13 +113,13 @@ jobs:
 
         - name: Recover Deb Archive
           working-directory: ${{runner.workspace}}
-          run: docker cp build:/root/SDRPlusPlus/sdrpp_debian_amd64.deb ./sdrpp_ubuntu_oracular_amd64.deb
+          run: docker cp build:/root/SDRPlusPlus/sdrpp_debian_amd64.deb ./
 
         - name: Save Deb Archive
           uses: actions/upload-artifact@v4
           with:
               name: sdrpp_ubuntu_oracular_amd64
-              path: ${{runner.workspace}}/sdrpp_ubuntu_oracular_amd64.deb
+              path: ${{runner.workspace}}/sdrpp_debian_amd64.deb
 
     create_release:
         name: Create Release
@@ -128,6 +128,21 @@ jobs:
         steps:
           - name: Download All Builds
             uses: actions/download-artifact@v4
+
+          - name: Create Archive
+            run: >
+              mkdir sdrpp_all && 
+              mv sdrpp_debian_bookworm_amd64/sdrpp_debian_amd64.deb sdrpp_all/sdrpp_debian_bookworm_amd64.deb && 
+              mv sdrpp_debian_sid_amd64/sdrpp_debian_amd64.deb sdrpp_all/sdrpp_debian_sid_amd64.deb && 
+              mv sdrpp_ubuntu_jammy_amd64/sdrpp_debian_amd64.deb sdrpp_all/sdrpp_ubuntu_jammy_amd64.deb &&
+              mv sdrpp_ubuntu_noble_amd64/sdrpp_debian_amd64.deb sdrpp_all/sdrpp_ubuntu_noble_amd64.deb &&
+              mv sdrpp_ubuntu_oracular_amd64/sdrpp_debian_amd64.deb sdrpp_all/sdrpp_ubuntu_oracular_amd64.deb
+          
+          - uses: actions/upload-artifact@v4
+            with:
+              name: sdrpp_all
+              path: sdrpp_all/
+
           - name: Create Release
             id: create_release
             uses: actions/create-release@v1
@@ -145,7 +160,7 @@ jobs:
               GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             with:
               upload_url: ${{ steps.create_release.outputs.upload_url }}
-              asset_path: sdrpp_debian_bookworm_amd64/sdrpp_debian_bookworm_amd64.deb
+              asset_path: sdrpp_all/sdrpp_debian_bookworm_amd64.deb
               asset_name: sdrpp_debian_bookworm_amd64.deb
               asset_content_type: application/dpkg
           - name: Upload Debian Sid asset
@@ -155,7 +170,7 @@ jobs:
               GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             with:
               upload_url: ${{ steps.create_release.outputs.upload_url }}
-              asset_path: sdrpp_debian_sid_amd64/sdrpp_debian_sid_amd64.deb
+              asset_path: sdrpp_all/sdrpp_debian_sid_amd64.deb
               asset_name: sdrpp_debian_sid_amd64.deb
               asset_content_type: application/dpkg
           - name: Upload Ubuntu Jammy asset
@@ -165,7 +180,7 @@ jobs:
               GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             with:
               upload_url: ${{ steps.create_release.outputs.upload_url }}
-              asset_path: sdrpp_ubuntu_jammy_amd64/sdrpp_ubuntu_jammy_amd64.deb
+              asset_path: sdrpp_all/sdrpp_ubuntu_jammy_amd64.deb
               asset_name: sdrpp_ubuntu_jammy_amd64.deb
               asset_content_type: application/dpkg
           - name: Upload Ubuntu Noble asset
@@ -175,7 +190,7 @@ jobs:
               GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             with:
               upload_url: ${{ steps.create_release.outputs.upload_url }}
-              asset_path: sdrpp_ubuntu_noble_amd64/sdrpp_ubuntu_noble_amd64.deb
+              asset_path: sdrpp_all/sdrpp_ubuntu_noble_amd64.deb
               asset_name: sdrpp_ubuntu_noble_amd64.deb
               asset_content_type: application/dpkg
           - name: Upload Ubuntu Oracular asset
@@ -185,7 +200,7 @@ jobs:
               GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             with:
               upload_url: ${{ steps.create_release.outputs.upload_url }}
-              asset_path: sdrpp_ubuntu_oracular_amd64/sdrpp_ubuntu_oracular_amd64.deb
+              asset_path: sdrpp_all/sdrpp_ubuntu_oracular_amd64.deb
               asset_name: sdrpp_ubuntu_oracular_amd64.deb
               asset_content_type: application/dpkg
 
