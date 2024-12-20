@@ -9,8 +9,9 @@ file(GLOB_RECURSE SRC "src/*.cpp" "src/*.h" "src/*.hpp" "src/*.c" "mbelib/*.c")
 find_package(ITPP REQUIRED)
 
 if(MSVC)
-    # needed for M_PI macro
+    set(SDRPP_COMPILER_FLAGS /O2 /Ob2 /std:c++14 /EHsc)
     add_definitions(-D_USE_MATH_DEFINES -D_CRT_SECURE_NO_WARNINGS)
+    target_compile_options(${TARGET} PRIVATE ${SDRPP_COMPILER_FLAGS})
 endif()
 
 if (NOT SDRPP_MODULE_CMAKE)
