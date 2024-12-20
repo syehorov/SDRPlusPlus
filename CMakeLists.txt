@@ -54,7 +54,7 @@ option(OPT_BUILD_PAGER_DECODER "Build the pager decoder module (no dependencies 
 option(OPT_BUILD_RADIO "Main audio modulation decoder (AM, FM, SSB, etc...)" ON)
 option(OPT_BUILD_RYFI_DECODER "RyFi data link decoder" OFF)
 option(OPT_BUILD_TETRA_DEMODULATOR "Build the TETRA demodulator module (no dependencies required)" ON)
-option(OPT_BUILD_VHFVOICERADIO "Build the extended audio demodulator (no dependencies required)" ON)
+option(OPT_BUILD_VHFVOICERADIO "Build the extended audio demodulator (no dependencies required)" OFF)
 
 # Misc
 option(OPT_BUILD_DISCORD_PRESENCE "Build the Discord Rich Presence module" OFF)
@@ -81,7 +81,7 @@ set(SDRPP_CORE_ROOT "${CMAKE_SOURCE_DIR}/core/src/")
 if (${CMAKE_BUILD_TYPE} MATCHES "Debug")
     # Debug Flags
     if (MSVC)
-        set(SDRPP_COMPILER_FLAGS /std:c++latest /EHsc)
+        set(SDRPP_COMPILER_FLAGS /std:c++17 /EHsc)
     elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         set(SDRPP_COMPILER_FLAGS -g -Og -std=c++17 -Wno-unused-command-line-argument -undefined dynamic_lookup)
     else ()
@@ -90,7 +90,7 @@ if (${CMAKE_BUILD_TYPE} MATCHES "Debug")
 else()
     # Normal Flags
     if (MSVC)
-        set(SDRPP_COMPILER_FLAGS /O2 /Ob2 /std:c++latest /EHsc)
+        set(SDRPP_COMPILER_FLAGS /O2 /Ob2 /std:c++17 /w /EHsc)
     elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         set(SDRPP_COMPILER_FLAGS -O3 -std=c++17 -Wno-unused-command-line-argument -undefined dynamic_lookup)
     else ()
