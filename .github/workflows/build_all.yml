@@ -47,13 +47,12 @@ jobs:
 
         - name: Recover Deb Archive
           working-directory: ${{runner.workspace}}
-          run: docker cp build:/root/SDRPlusPlus/sdrpp_debian_amd64.deb ./sdrpp_debian_sid_amd64.deb
-
+          run: docker cp build:/root/SDRPlusPlus/sdrpp_debian_amd64.deb ./
         - name: Save Deb Archive
           uses: actions/upload-artifact@v4
           with:
               name: sdrpp_debian_sid_amd64
-              path: ${{runner.workspace}}/sdrpp_debian_sid_amd64.deb
+              path: ${{runner.workspace}}/sdrpp_debian_amd64.deb
 
     build_ubuntu_jammy:
         runs-on: ubuntu-latest
