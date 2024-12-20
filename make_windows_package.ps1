@@ -64,7 +64,7 @@ cp 'C:/Program Files/SDRplay/API/x64/sdrplay_api.dll' sdrpp_windows_x64/ -ErrorA
 
 cp $build_dir/source_modules/sdrpp_server_source/Release/sdrpp_server_source.dll sdrpp_windows_x64/modules/
 
-cp $build_dir/source_modules/soapy_source/Release/soapy_server_source.dll sdrpp_windows_x64/modules/
+cp $build_dir/source_modules/soapy_source/Release/soapy_source.dll sdrpp_windows_x64/modules/
 cp 'C:/Program Files/PothosSDR/bin/SoapySDR.dll' sdrpp_windows_x64/
 cp 'C:/Program Files/PothosSDR/bin/SoapyOsmoSDR.dll' sdrpp_windows_x64/
 cp 'C:/Program Files/PothosSDR/bin/osmosdr.dll' sdrpp_windows_x64/
