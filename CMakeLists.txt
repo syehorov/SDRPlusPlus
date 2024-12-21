@@ -54,7 +54,7 @@ option(OPT_BUILD_PAGER_DECODER "Build the pager decoder module (no dependencies 
 option(OPT_BUILD_RADIO "Main audio modulation decoder (AM, FM, SSB, etc...)" ON)
 option(OPT_BUILD_RYFI_DECODER "RyFi data link decoder" OFF)
 option(OPT_BUILD_TETRA_DEMODULATOR "Build the TETRA demodulator module (no dependencies required)" ON)
-option(OPT_BUILD_VHFVOICERADIO "Build the extended audio demodulator (no dependencies required)" OFF)
+option(OPT_BUILD_VHFVOICERADIO "Build the extended audio demodulator (no dependencies required)" ON)
 
 # Misc
 option(OPT_BUILD_DISCORD_PRESENCE "Build the Discord Rich Presence module" OFF)
