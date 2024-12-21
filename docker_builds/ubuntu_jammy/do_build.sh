@@ -61,7 +61,7 @@ echo Version: 1.2.1$BUILD_NO >> /root/SDRPlusPlus/sdrpp_debian_amd64/DEBIAN/cont
 echo Maintainer: Serhii Yehorov >> /root/SDRPlusPlus/sdrpp_debian_amd64/DEBIAN/control
 echo Architecture: all >> /root/SDRPlusPlus/sdrpp_debian_amd64/DEBIAN/control
 echo Description: Bloat-free SDR receiver software >> /root/SDRPlusPlus/sdrpp_debian_amd64/DEBIAN/control
-echo Depends: libiio0, libad9361-0, libhackrf0, libairspy0, libairspyhf1, librtaudio7, librtlsdr0, libbladerf2, liblimesuite23.11-1, libuhd4.7.0, libglfw3, sdrplay-api, libsoapysdr0.8 >> /root/SDRPlusPlus/sdrpp_debian_amd64/DEBIAN/control
+echo Depends: libiio0, libad9361-0, libhackrf0, libairspy0, libairspyhf1, librtaudio6, librtlsdr0, libbladerf2, liblimesuite20.10-1, libuhd4.1.0, libopengl0, libglfw3, sdrplay-api, libsoapysdr0.8 >> /root/SDRPlusPlus/sdrpp_debian_amd64/DEBIAN/control
 
 # Copying files
 cd /root/SDRPlusPlus/build
