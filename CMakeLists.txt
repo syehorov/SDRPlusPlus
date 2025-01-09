@@ -198,6 +198,7 @@ if (OPT_BUILD_RTL_TCP_SOURCE)
 add_subdirectory("source_modules/rtl_tcp_source")
 endif (OPT_BUILD_RTL_TCP_SOURCE)
 
+
 if (OPT_BUILD_SDRPP_SERVER_SOURCE)
 add_subdirectory("source_modules/sdrpp_server_source")
 endif (OPT_BUILD_SDRPP_SERVER_SOURCE)
@@ -226,6 +227,9 @@ if (OPT_BUILD_USRP_SOURCE)
 add_subdirectory("source_modules/usrp_source")
 endif (OPT_BUILD_USRP_SOURCE)
 
+if (OPT_BUILD_SDDC_SOURCE)
+add_subdirectory("source_modules/sddc_source")
+endif (OPT_BUILD_SDDC_SOURCE)
 
 # Sink modules
 if (OPT_BUILD_ANDROID_AUDIO_SINK)
