@@ -44,7 +44,7 @@ public:
         this->name = name;
         root = (std::string)core::args["root"];
         strcpy(nameTemplate, "$t_$f_$h-$m-$s_$d-$M-$y");
-
+        strcpy(endSuffixTemplate, "$h-$m-$s_$d-$M-$y");
         // Define recording formats
         formats.define("WAV", "WAV", "wav");
         formats.define("MP3", "MP3", "mp3");
@@ -101,6 +101,16 @@ public:
                 _nameTemplate = _nameTemplate.substr(0, sizeof(nameTemplate)-1);
             }
             strcpy(nameTemplate, _nameTemplate.c_str());
+        }
+        if (config.conf[name].contains("addEndSuffix")) {
+            addEndSuffix = config.conf[name]["addEndSuffix"];
+        }
+        if (config.conf[name].contains("endSuffixTemplate")) {
+            std::string _endSuffixTemplate = config.conf[name]["endSuffixTemplate"];
+            if (_endSuffixTemplate.length() > sizeof(endSuffixTemplate)-1) {
+                _endSuffixTemplate = _endSuffixTemplate.substr(0, sizeof(endSuffixTemplate)-1);
+            }
+            strcpy(endSuffixTemplate, _endSuffixTemplate.c_str());
         }
         config.release();
 
@@ -196,10 +206,10 @@ public:
             lame_init_params(lame);
 
             std::string vfoName = (recMode == RECORDER_MODE_AUDIO) ? selectedStreamName : "";
-            std::string mp3Path = expandString(folderSelect.path + "/" + genFileName(nameTemplate, recMode, vfoName) + ".mp3");
-            mp3File.open(mp3Path, std::ios::binary);
+            lastFilename = expandString(folderSelect.path + "/" + genFileName(nameTemplate, recMode, vfoName) + ".mp3");
+            mp3File.open(lastFilename, std::ios::binary);
             if (!mp3File.is_open()) {
-                flog::error("Failed to open MP3 file: {0}", mp3Path);
+                flog::error("Failed to open MP3 file: {0}", lastFilename);
                 return;
             }
 
@@ -209,6 +219,7 @@ public:
             std::string vfoName = (recMode == RECORDER_MODE_AUDIO) ? selectedStreamName : "";
             std::string extension = ".wav";
             std::string expandedPath = expandString(folderSelect.path + "/" + genFileName(nameTemplate, recMode, vfoName) + extension);
+            lastFilename = expandedPath;
             if (!writer.open(expandedPath)) {
                 flog::error("Failed to open file for recording: {0}", expandedPath);
                 return;
@@ -268,7 +279,21 @@ public:
         }
         // Close file
         writer.close();
-        
+
+        if (addEndSuffix) {
+            auto endTime = std::chrono::system_clock::now();
+            time_t t = std::chrono::system_clock::to_time_t(endTime);
+            std::string suffix = genFileName(endSuffixTemplate, recMode, "");
+
+            std::string newName = lastFilename.substr(0, lastFilename.find_last_of('.')) + suffix + lastFilename.substr(lastFilename.find_last_of('.'));
+
+            try {
+                std::rename(lastFilename.c_str(), newName.c_str());
+                flog::info("Renamed file to: {}", newName);
+            } catch (...) {
+                flog::error("Failed to rename file with suffix");
+            }
+        }
         recording = false;
     }
 
@@ -314,7 +339,23 @@ private:
             config.release(true);
         }
 
-        
+        ImGui::LeftLabel("Add end-time suffix");
+        if (ImGui::Checkbox(CONCAT("##_recorder_add_suffix_", _this->name), &_this->addEndSuffix)) {
+            config.acquire();
+            config.conf[_this->name]["addEndSuffix"] = _this->addEndSuffix;
+            config.release(true);
+        }
+
+        if (_this->addEndSuffix) {
+            ImGui::LeftLabel("End Suffix Template");
+            ImGui::FillWidth();
+            if (ImGui::InputText(CONCAT("##_recorder_suffix_format_", _this->name), _this->endSuffixTemplate, 1023)) {
+                config.acquire();
+                config.conf[_this->name]["endSuffixTemplate"] = _this->endSuffixTemplate;
+                config.release(true);
+            }
+        }
+
         ImGui::LeftLabel("Format");
         ImGui::FillWidth();
         if (ImGui::Combo(CONCAT("##_recorder_format_", _this->name), &_this->formatId, _this->formats.txt)) {
@@ -686,7 +727,9 @@ private:
     bool enabled = true;
     std::string root;
     char nameTemplate[1024];
-
+    char endSuffixTemplate[1024];
+    bool addEndSuffix = false;
+    std::string lastFilename;
     OptionList<std::string, wav::Format> containers;
     OptionList<std::string, std::string> formats;
     int formatId = 0;
