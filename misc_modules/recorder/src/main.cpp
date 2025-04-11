@@ -1,3 +1,4 @@
+#include <lame/lame.h>
 #include <imgui.h>
 #include <module.h>
 #include <dsp/types.h>
@@ -22,6 +23,7 @@
 #include <utils/optionlist.h>
 #include <utils/wav.h>
 #include <radio_interface.h>
+#include <vorbis/vorbisenc.h>
 
 #define CONCAT(a, b) ((std::string(a) + b).c_str())
 
@@ -31,11 +33,22 @@ SDRPP_MOD_INFO{
     /* Name:            */ "recorder",
     /* Description:     */ "Recorder module for SDR++",
     /* Author:          */ "Ryzerth",
-    /* Version:         */ 0, 3, 0,
+    /* Version:         */ 0, 3, 1,
     /* Max instances    */ -1
 };
 
 ConfigManager config;
+
+ogg_stream_state oggStream;
+ogg_page oggPage;
+ogg_packet oggPacket;
+
+vorbis_info vi;
+vorbis_comment vc;
+vorbis_dsp_state vd;
+vorbis_block vb;
+
+std::ofstream oggFile;
 
 class RecorderModule : public ModuleManager::Instance {
 public:
@@ -44,6 +57,9 @@ public:
         root = (std::string)core::args["root"];
         strcpy(nameTemplate, "$t_$f_$h-$m-$s_$d-$M-$y");
 
+        // Define recording formats
+        formats.define("WAV", "WAV", "wav");
+        formats.define("MP3", "MP3", "mp3");
         // Define option lists
         containers.define("WAV", wav::FORMAT_WAV);
         // containers.define("RF64", wav::FORMAT_RF64); // Disabled for now
@@ -57,6 +73,9 @@ public:
         sampleTypeId = sampleTypes.valueId(wav::SAMP_TYPE_INT16);
 
         // Load config
+        if (config.conf[name].contains("format") && formats.keyExists(config.conf[name]["format"])) {
+            formatId = formats.keyId(config.conf[name]["format"]);
+        }
         config.acquire();
         if (config.conf[name].contains("mode")) {
             recMode = config.conf[name]["mode"];
@@ -69,6 +88,12 @@ public:
         }
         if (config.conf[name].contains("sampleType") && sampleTypes.keyExists(config.conf[name]["sampleType"])) {
             sampleTypeId = sampleTypes.keyId(config.conf[name]["sampleType"]);
+        }
+        if (config.conf[name].contains("bitrate")) {
+            bitrateIndex = std::clamp<int>(config.conf[name]["bitrate"], 0, 6);
+        }
+        if (config.conf[name].contains("samplerate")) {
+            samplerateIndex = std::clamp<int>(config.conf[name]["samplerate"], 0, 4);
         }
         if (config.conf[name].contains("audioStream")) {
             selectedStreamName = config.conf[name]["audioStream"];
@@ -167,15 +192,68 @@ public:
         writer.setSampleType(sampleTypes[sampleTypeId]);
         writer.setSamplerate(samplerate);
 
-        // Open file
-        std::string vfoName = (recMode == RECORDER_MODE_AUDIO) ? selectedStreamName : "";
-        std::string extension = ".wav";
-        std::string expandedPath = expandString(folderSelect.path + "/" + genFileName(nameTemplate, recMode, vfoName) + extension);
-        if (!writer.open(expandedPath)) {
-            flog::error("Failed to open file for recording: {0}", expandedPath);
-            return;
-        }
+        
+        if (formats.value(formatId) == "mp3") {
+            lame = lame_init();
+            lame_set_in_samplerate(lame, samplerate);
+            lame_set_num_channels(lame, stereo ? 2 : 1);
+            static const int bitrates[] = {64, 96, 128, 160, 192, 256, 320};
+            static const int samplerates[] = {22050, 24000, 32000, 44100, 48000};
 
+            lame_set_brate(lame, bitrates[bitrateIndex]);
+            lame_set_in_samplerate(lame, samplerates[samplerateIndex]);
+            lame_set_quality(lame, 2);
+
+            lame_init_params(lame);
+
+            std::string vfoName = (recMode == RECORDER_MODE_AUDIO) ? selectedStreamName : "";
+            std::string mp3Path = expandString(folderSelect.path + "/" + genFileName(nameTemplate, recMode, vfoName) + ".mp3");
+            mp3File.open(mp3Path, std::ios::binary);
+            if (!mp3File.is_open()) {
+                flog::error("Failed to open MP3 file: {0}", mp3Path);
+                return;
+            }
+            
+        } else if (format == "ogg") {
+            vorbis_info_init(&vi);
+            vorbis_encode_init_vbr(&vi, stereo ? 2 : 1, samplerates[samplerateIndex], 0.4f);
+
+            vorbis_comment_init(&vc);
+            vorbis_comment_add_tag(&vc, "ENCODER", "SDR++ Recorder");
+
+            vorbis_analysis_init(&vd, &vi);
+            vorbis_block_init(&vd, &vb);
+
+            srand(time(NULL));
+            ogg_stream_init(&oggStream, rand());
+
+            oggFile.open(expandString(path + "/" + filename + ".ogg"), std::ios::binary);
+
+            // header
+            ogg_packet header, header_comm, header_code;
+            vorbis_analysis_headerout(&vd, &vc, &header, &header_comm, &header_code);
+            ogg_stream_packetin(&oggStream, &header);
+            ogg_stream_packetin(&oggStream, &header_comm);
+            ogg_stream_packetin(&oggStream, &header_code);
+
+            while (ogg_stream_flush(&oggStream, &oggPage)) {
+                oggFile.write((char*)oggPage.header, oggPage.header_len);
+                oggFile.write((char*)oggPage.body, oggPage.body_len);
+            }
+
+            return;
+
+        } else {
+    
+            // Open file
+            std::string vfoName = (recMode == RECORDER_MODE_AUDIO) ? selectedStreamName : "";
+            std::string extension = ".wav";
+            std::string expandedPath = expandString(folderSelect.path + "/" + genFileName(nameTemplate, recMode, vfoName) + extension);
+            if (!writer.open(expandedPath)) {
+                flog::error("Failed to open file for recording: {0}", expandedPath);
+                return;
+            }
+        }
         // Open audio stream or baseband
         if (recMode == RECORDER_MODE_AUDIO) {
             // Start correct path depending on 
@@ -216,6 +294,39 @@ public:
             sigpath::iqFrontEnd.unbindIQStream(basebandStream);
             basebandSink.stop();
             delete basebandStream;
+        }
+
+        if (formats.value(formatId) == "mp3" && lame && mp3File.is_open()) {
+            std::vector<unsigned char> flushBuf(7200);
+            int flushSize = lame_encode_flush(lame, flushBuf.data(), flushBuf.size());
+            if (flushSize > 0) {
+                mp3File.write((char*)flushBuf.data(), flushBuf.size());
+            }
+            mp3File.close();
+            lame_close(lame);
+            lame = nullptr;
+        }
+
+        if (formats.value(formatId) == "ogg") {
+            vorbis_analysis_wrote(&vd, 0); // EOF
+            while (vorbis_analysis_blockout(&vd, &vb) == 1) {
+                vorbis_analysis(&vb, NULL);
+                vorbis_bitrate_addblock(&vb);
+                while (vorbis_bitrate_flushpacket(&vd, &oggPacket)) {
+                    ogg_stream_packetin(&oggStream, &oggPacket);
+                    while (ogg_stream_pageout(&oggStream, &oggPage)) {
+                        oggFile.write((char*)oggPage.header, oggPage.header_len);
+                        oggFile.write((char*)oggPage.body, oggPage.body_len);
+                    }
+                }
+            }
+
+            ogg_stream_clear(&oggStream);
+            vorbis_block_clear(&vb);
+            vorbis_dsp_clear(&vd);
+            vorbis_comment_clear(&vc);
+            vorbis_info_clear(&vi);
+            oggFile.close();
         }
 
         // Close file
@@ -266,22 +377,53 @@ private:
             config.release(true);
         }
 
-        ImGui::LeftLabel("Container");
+        
+        ImGui::LeftLabel("Format");
         ImGui::FillWidth();
-        if (ImGui::Combo(CONCAT("##_recorder_container_", _this->name), &_this->containerId, _this->containers.txt)) {
+        if (ImGui::Combo(CONCAT("##_recorder_format_", _this->name), &_this->formatId, _this->formats.txt)) {
             config.acquire();
-            config.conf[_this->name]["container"] = _this->containers.key(_this->containerId);
+            config.conf[_this->name]["format"] = _this->formats.key(_this->formatId);
             config.release(true);
         }
 
-        ImGui::LeftLabel("Sample type");
-        ImGui::FillWidth();
-        if (ImGui::Combo(CONCAT("##_recorder_st_", _this->name), &_this->sampleTypeId, _this->sampleTypes.txt)) {
-            config.acquire();
-            config.conf[_this->name]["sampleType"] = _this->sampleTypes.key(_this->sampleTypeId);
-            config.release(true);
-        }
+        std::string fmt = _this->formats.value(_this->formatId);
+        if (fmt == "mp3") {
+            ImGui::LeftLabel("Bitrate (kbps)");
+            ImGui::FillWidth();
+            static const char* bitrates[] = {"64", "96", "128", "160", "192", "256", "320"};
+            static int bitrateIndex = 2;
+            if (ImGui::Combo(CONCAT("##_recorder_bitrate_", _this->name), &_this->bitrateIndex, bitrates, IM_ARRAYSIZE(bitrates))) {
+                config.acquire();
+                config.conf[_this->name]["bitrate"] = _this->bitrateIndex;
+                config.release(true);
+            }
 
+            ImGui::LeftLabel("Sample rate (Hz)");
+            ImGui::FillWidth();
+            static const char* samplerates[] = {"22050", "24000", "32000", "44100", "48000"};
+            if (ImGui::Combo(CONCAT("##_recorder_samplerate_", _this->name), &_this->samplerateIndex, samplerates, IM_ARRAYSIZE(samplerates))) {
+                config.acquire();
+                config.conf[_this->name]["samplerate"] = _this->samplerateIndex;
+                config.release(true);
+            }
+
+        } else {
+            ImGui::LeftLabel("Container");
+            ImGui::FillWidth();
+            if (ImGui::Combo(CONCAT("##_recorder_container_", _this->name), &_this->containerId, _this->containers.txt)) {
+                config.acquire();
+                config.conf[_this->name]["container"] = _this->containers.key(_this->containerId);
+                config.release(true);
+            }
+
+            ImGui::LeftLabel("Sample type");
+            ImGui::FillWidth();
+            if (ImGui::Combo(CONCAT("##_recorder_st_", _this->name), &_this->sampleTypeId, _this->sampleTypes.txt)) {
+                config.acquire();
+                config.conf[_this->name]["sampleType"] = _this->sampleTypes.key(_this->sampleTypeId);
+                config.release(true);
+            }
+        }
         if (_this->recording) { style::endDisabled(); }
 
         // Show additional audio options
@@ -466,6 +608,8 @@ private:
 
         // Format to string
         char freqStr[128];
+        char mfreqStr[128];
+        char kfreqStr[128];
         char hourStr[128];
         char minStr[128];
         char secStr[128];
@@ -473,7 +617,9 @@ private:
         char monStr[128];
         char yearStr[128];
         const char* modeStr = (recMode == RECORDER_MODE_AUDIO) ? "Unknown" : "IQ";
-        sprintf(freqStr, "%.0lfHz", freq);
+        sprintf(freqStr, "%.0lf", freq);
+        sprintf(kfreqStr, "%.4lf", freq / 1000);
+        sprintf(mfreqStr, "%.4lf", freq / 1000000);
         sprintf(hourStr, "%02d", ltm->tm_hour);
         sprintf(minStr, "%02d", ltm->tm_min);
         sprintf(secStr, "%02d", ltm->tm_sec);
@@ -489,6 +635,8 @@ private:
         // Replace in template
         templ = std::regex_replace(templ, std::regex("\\$t"), type);
         templ = std::regex_replace(templ, std::regex("\\$f"), freqStr);
+        templ = std::regex_replace(templ, std::regex("\\$kf"), kfreqStr);
+        templ = std::regex_replace(templ, std::regex("\\$Mf"), mfreqStr);
         templ = std::regex_replace(templ, std::regex("\\$h"), hourStr);
         templ = std::regex_replace(templ, std::regex("\\$m"), minStr);
         templ = std::regex_replace(templ, std::regex("\\$s"), secStr);
@@ -506,6 +654,17 @@ private:
 
     static void complexHandler(dsp::complex_t* data, int count, void* ctx) {
         RecorderModule* _this = (RecorderModule*)ctx;
+        
+        if (_this->formats.value(_this->formatId) == "mp3" && _this->lame && _this->mp3File.is_open()) {
+            int mp3buf_size = 1.25 * count * 2 + 7200;
+            std::vector<unsigned char> mp3buf(mp3buf_size);
+            int writeSize = lame_encode_buffer_interleaved_ieee_float(_this->lame, (float*)data, count, mp3buf.data(), mp3buf_size);
+            if (writeSize > 0) {
+                _this->mp3File.write((char*)mp3buf.data(), writeSize);
+            }
+            return;
+        }
+
         _this->writer.write((float*)data, count);
     }
 
@@ -522,6 +681,41 @@ private:
             _this->ignoringSilence = (absMax < SILENCE_LVL);
             if (_this->ignoringSilence) { return; }
         }
+        
+        if (_this->formats.value(_this->formatId) == "mp3" && _this->lame && _this->mp3File.is_open()) {
+            int mp3buf_size = 1.25 * count * 2 + 7200;
+            std::vector<unsigned char> mp3buf(mp3buf_size);
+            int writeSize = lame_encode_buffer_interleaved_ieee_float(_this->lame, (float*)data, count, mp3buf.data(), mp3buf_size);
+            if (writeSize > 0) {
+                _this->mp3File.write((char*)mp3buf.data(), writeSize);
+            }
+            return;
+        }
+
+        if (_this->formats.value(_this->formatId) == "ogg" && _this->oggFile.is_open()) {
+            float** buffer = vorbis_analysis_buffer(&_this->vd, count);
+            const float* input = reinterpret_cast<const float*>(data);
+            for (int i = 0; i < count; ++i) {
+                buffer[0][i] = input[i * 2];     // L
+                buffer[1][i] = input[i * 2 + 1]; // R
+            }
+
+            vorbis_analysis_wrote(&_this->vd, count);
+
+            while (vorbis_analysis_blockout(&_this->vd, &_this->vb) == 1) {
+                vorbis_analysis(&_this->vb, NULL);
+                vorbis_bitrate_addblock(&_this->vb);
+                while (vorbis_bitrate_flushpacket(&_this->vd, &_this->oggPacket)) {
+                    ogg_stream_packetin(&_this->oggStream, &_this->oggPacket);
+                    while (ogg_stream_pageout(&_this->oggStream, &_this->oggPage)) {
+                        _this->oggFile.write((char*)_this->oggPage.header, _this->oggPage.header_len);
+                        _this->oggFile.write((char*)_this->oggPage.body, _this->oggPage.body_len);
+                    }
+                }
+            }
+            return;
+        }
+
         _this->writer.write((float*)data, count);
     }
 
@@ -536,6 +730,41 @@ private:
             _this->ignoringSilence = (absMax < SILENCE_LVL);
             if (_this->ignoringSilence) { return; }
         }
+        
+        if (_this->formats.value(_this->formatId) == "mp3" && _this->lame && _this->mp3File.is_open()) {
+            int mp3buf_size = 1.25 * count + 7200;
+            std::vector<unsigned char> mp3buf(mp3buf_size);
+            int writeSize = lame_encode_buffer_ieee_float(_this->lame, data, nullptr, count, mp3buf.data(), mp3buf_size);
+            if (writeSize > 0) {
+                _this->mp3File.write((char*)mp3buf.data(), writeSize);
+            }
+            return;
+        }
+
+        if (_this->formats.value(_this->formatId) == "ogg" && _this->oggFile.is_open()) {
+            float** buffer = vorbis_analysis_buffer(&_this->vd, count);
+            const float* input = reinterpret_cast<const float*>(data);
+            for (int i = 0; i < count; ++i) {
+                buffer[0][i] = input[i * 2];     // L
+                buffer[1][i] = input[i * 2 + 1]; // R
+            }
+
+            vorbis_analysis_wrote(&_this->vd, count);
+
+            while (vorbis_analysis_blockout(&_this->vd, &_this->vb) == 1) {
+                vorbis_analysis(&_this->vb, NULL);
+                vorbis_bitrate_addblock(&_this->vb);
+                while (vorbis_bitrate_flushpacket(&_this->vd, &_this->oggPacket)) {
+                    ogg_stream_packetin(&_this->oggStream, &_this->oggPacket);
+                    while (ogg_stream_pageout(&_this->oggStream, &_this->oggPage)) {
+                        _this->oggFile.write((char*)_this->oggPage.header, _this->oggPage.header_len);
+                        _this->oggFile.write((char*)_this->oggPage.body, _this->oggPage.body_len);
+                    }
+                }
+            }
+            return;
+        }
+
         _this->writer.write(data, count);
     }
 
@@ -565,6 +794,10 @@ private:
     char nameTemplate[1024];
 
     OptionList<std::string, wav::Format> containers;
+    OptionList<std::string, std::string> formats;
+    int formatId = 0;
+    int bitrateIndex = 2;
+    int samplerateIndex = 4;
     OptionList<int, wav::SampleType> sampleTypes;
     FolderSelect folderSelect;
 
@@ -580,6 +813,10 @@ private:
     bool recording = false;
     bool ignoringSilence = false;
     wav::Writer writer;
+    
+    lame_t lame = nullptr;
+    std::ofstream mp3File;
+
     std::recursive_mutex recMtx;
     dsp::stream<dsp::complex_t>* basebandStream;
     dsp::stream<dsp::stereo_t> stereoStream;
