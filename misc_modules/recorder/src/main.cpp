@@ -1,4 +1,3 @@
-#include <lame/lame.h>
 #include <imgui.h>
 #include <module.h>
 #include <dsp/types.h>
@@ -23,7 +22,7 @@
 #include <utils/optionlist.h>
 #include <utils/wav.h>
 #include <radio_interface.h>
-#include <vorbis/vorbisenc.h>
+#include <lame/lame.h>
 
 #define CONCAT(a, b) ((std::string(a) + b).c_str())
 
@@ -38,17 +37,6 @@ SDRPP_MOD_INFO{
 };
 
 ConfigManager config;
-
-ogg_stream_state oggStream;
-ogg_page oggPage;
-ogg_packet oggPacket;
-
-vorbis_info vi;
-vorbis_comment vc;
-vorbis_dsp_state vd;
-vorbis_block vb;
-
-std::ofstream oggFile;
 
 class RecorderModule : public ModuleManager::Instance {
 public:
@@ -194,6 +182,7 @@ public:
 
         
         if (formats.value(formatId) == "mp3") {
+            this->recordingStart = std::chrono::steady_clock::now();
             lame = lame_init();
             lame_set_in_samplerate(lame, samplerate);
             lame_set_num_channels(lame, stereo ? 2 : 1);
@@ -213,35 +202,6 @@ public:
                 flog::error("Failed to open MP3 file: {0}", mp3Path);
                 return;
             }
-            
-        } else if (format == "ogg") {
-            vorbis_info_init(&vi);
-            vorbis_encode_init_vbr(&vi, stereo ? 2 : 1, samplerates[samplerateIndex], 0.4f);
-
-            vorbis_comment_init(&vc);
-            vorbis_comment_add_tag(&vc, "ENCODER", "SDR++ Recorder");
-
-            vorbis_analysis_init(&vd, &vi);
-            vorbis_block_init(&vd, &vb);
-
-            srand(time(NULL));
-            ogg_stream_init(&oggStream, rand());
-
-            oggFile.open(expandString(path + "/" + filename + ".ogg"), std::ios::binary);
-
-            // header
-            ogg_packet header, header_comm, header_code;
-            vorbis_analysis_headerout(&vd, &vc, &header, &header_comm, &header_code);
-            ogg_stream_packetin(&oggStream, &header);
-            ogg_stream_packetin(&oggStream, &header_comm);
-            ogg_stream_packetin(&oggStream, &header_code);
-
-            while (ogg_stream_flush(&oggStream, &oggPage)) {
-                oggFile.write((char*)oggPage.header, oggPage.header_len);
-                oggFile.write((char*)oggPage.body, oggPage.body_len);
-            }
-
-            return;
 
         } else {
     
@@ -306,29 +266,6 @@ public:
             lame_close(lame);
             lame = nullptr;
         }
-
-        if (formats.value(formatId) == "ogg") {
-            vorbis_analysis_wrote(&vd, 0); // EOF
-            while (vorbis_analysis_blockout(&vd, &vb) == 1) {
-                vorbis_analysis(&vb, NULL);
-                vorbis_bitrate_addblock(&vb);
-                while (vorbis_bitrate_flushpacket(&vd, &oggPacket)) {
-                    ogg_stream_packetin(&oggStream, &oggPacket);
-                    while (ogg_stream_pageout(&oggStream, &oggPage)) {
-                        oggFile.write((char*)oggPage.header, oggPage.header_len);
-                        oggFile.write((char*)oggPage.body, oggPage.body_len);
-                    }
-                }
-            }
-
-            ogg_stream_clear(&oggStream);
-            vorbis_block_clear(&vb);
-            vorbis_dsp_clear(&vd);
-            vorbis_comment_clear(&vc);
-            vorbis_info_clear(&vi);
-            oggFile.close();
-        }
-
         // Close file
         writer.close();
         
@@ -406,7 +343,6 @@ private:
                 config.conf[_this->name]["samplerate"] = _this->samplerateIndex;
                 config.release(true);
             }
-
         } else {
             ImGui::LeftLabel("Container");
             ImGui::FillWidth();
@@ -481,7 +417,13 @@ private:
             if (ImGui::Button(CONCAT("Stop##_recorder_rec_", _this->name), ImVec2(menuWidth, 0))) {
                 _this->stop();
             }
-            uint64_t seconds = _this->writer.getSamplesWritten() / _this->samplerate;
+            uint64_t seconds = 0;
+            if (_this->formats.value(_this->formatId) == "mp3") {
+                auto now = std::chrono::steady_clock::now();
+                seconds = std::chrono::duration_cast<std::chrono::seconds>(now - _this->recordingStart).count();
+            } else {
+                seconds = _this->writer.getSamplesWritten() / _this->samplerate;
+            }
             time_t diff = seconds;
             tm* dtm = gmtime(&diff);
 
@@ -692,30 +634,6 @@ private:
             return;
         }
 
-        if (_this->formats.value(_this->formatId) == "ogg" && _this->oggFile.is_open()) {
-            float** buffer = vorbis_analysis_buffer(&_this->vd, count);
-            const float* input = reinterpret_cast<const float*>(data);
-            for (int i = 0; i < count; ++i) {
-                buffer[0][i] = input[i * 2];     // L
-                buffer[1][i] = input[i * 2 + 1]; // R
-            }
-
-            vorbis_analysis_wrote(&_this->vd, count);
-
-            while (vorbis_analysis_blockout(&_this->vd, &_this->vb) == 1) {
-                vorbis_analysis(&_this->vb, NULL);
-                vorbis_bitrate_addblock(&_this->vb);
-                while (vorbis_bitrate_flushpacket(&_this->vd, &_this->oggPacket)) {
-                    ogg_stream_packetin(&_this->oggStream, &_this->oggPacket);
-                    while (ogg_stream_pageout(&_this->oggStream, &_this->oggPage)) {
-                        _this->oggFile.write((char*)_this->oggPage.header, _this->oggPage.header_len);
-                        _this->oggFile.write((char*)_this->oggPage.body, _this->oggPage.body_len);
-                    }
-                }
-            }
-            return;
-        }
-
         _this->writer.write((float*)data, count);
     }
 
@@ -730,7 +648,7 @@ private:
             _this->ignoringSilence = (absMax < SILENCE_LVL);
             if (_this->ignoringSilence) { return; }
         }
-        
+
         if (_this->formats.value(_this->formatId) == "mp3" && _this->lame && _this->mp3File.is_open()) {
             int mp3buf_size = 1.25 * count + 7200;
             std::vector<unsigned char> mp3buf(mp3buf_size);
@@ -740,31 +658,7 @@ private:
             }
             return;
         }
-
-        if (_this->formats.value(_this->formatId) == "ogg" && _this->oggFile.is_open()) {
-            float** buffer = vorbis_analysis_buffer(&_this->vd, count);
-            const float* input = reinterpret_cast<const float*>(data);
-            for (int i = 0; i < count; ++i) {
-                buffer[0][i] = input[i * 2];     // L
-                buffer[1][i] = input[i * 2 + 1]; // R
-            }
-
-            vorbis_analysis_wrote(&_this->vd, count);
-
-            while (vorbis_analysis_blockout(&_this->vd, &_this->vb) == 1) {
-                vorbis_analysis(&_this->vb, NULL);
-                vorbis_bitrate_addblock(&_this->vb);
-                while (vorbis_bitrate_flushpacket(&_this->vd, &_this->oggPacket)) {
-                    ogg_stream_packetin(&_this->oggStream, &_this->oggPacket);
-                    while (ogg_stream_pageout(&_this->oggStream, &_this->oggPage)) {
-                        _this->oggFile.write((char*)_this->oggPage.header, _this->oggPage.header_len);
-                        _this->oggFile.write((char*)_this->oggPage.body, _this->oggPage.body_len);
-                    }
-                }
-            }
-            return;
-        }
-
+    
         _this->writer.write(data, count);
     }
 
@@ -816,6 +710,7 @@ private:
     
     lame_t lame = nullptr;
     std::ofstream mp3File;
+    std::chrono::steady_clock::time_point recordingStart;
 
     std::recursive_mutex recMtx;
     dsp::stream<dsp::complex_t>* basebandStream;
