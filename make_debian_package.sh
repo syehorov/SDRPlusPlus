@@ -7,12 +7,13 @@ mkdir sdrpp_${1}_amd64/DEBIAN
 
 # Create package info
 echo Create package info
-echo Package: sdrpp >> sdrpp_${1}_amd64/DEBIAN/control
-echo Version: ${1} >> sdrpp_${1}_amd64/DEBIAN/control
-echo Maintainer: Serhii Yehorov >> sdrpp_${1}_amd64/DEBIAN/control
-echo Architecture: amd64 >> sdrpp_${1}_amd64/DEBIAN/control
-echo Description: Bloat-free SDR receiver software >> sdrpp_${1}_amd64/DEBIAN/control
-echo Depends: libiio0, libad9361-0, libhackrf0, libairspy0, libairspyhf1, librtaudio7, librtlsdr0, libbladerf2, liblimesuite23.11-1, libuhd4.7.0, libglfw3, sdrplay-api, libsoapysdr0.8 >> sdrpp_${1}_amd64/DEBIAN/control
+echo Package: sdrpp >> sdrpp_debian_amd64/DEBIAN/control
+echo Version: 1.2.1$BUILD_NO >> sdrpp_debian_amd64/DEBIAN/control
+echo Maintainer: syehorov >> sdrpp_debian_amd64/DEBIAN/control
+echo Architecture: all >> sdrpp_debian_amd64/DEBIAN/control
+echo Description: Bloat-free SDR receiver software >> sdrpp_debian_amd64/DEBIAN/control
+echo Depends: $2 >> sdrpp_debian_amd64/DEBIAN/control
+
 
 # Copying files
 ORIG_DIR=$PWD
