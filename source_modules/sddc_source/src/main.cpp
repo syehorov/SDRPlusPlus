@@ -1,711 +1,493 @@
-#include <module.h>  
-#include <utils/flog.h>
+#include <imgui.h>
+#include <module.h>
+#include <gui/gui.h>
+#include <gui/smgui.h>
 #include <signal_path/signal_path.h>
 #include <core.h>
-#include <gui/gui.h>
-#include <gui/style.h>
-#include <config.h>   
-#include <gui/widgets/stepped_slider.h>
-#include <gui/smgui.h>
-#include "../3rdparty/ExtIO_sddc/libsddc/libsddc.h"
-#include "../3rdparty/ExtIO_sddc/Core/RadioHandler.h"
-#include "../3rdparty/ExtIO_sddc/Core/r2iq.h"  
-#include <thread>
-#include <string.h>
-
-#define CONCAT(a, b) ((std::string(a) + b).c_str())
+#include <utils/optionlist.h>
+#include <atomic>
+#include <sddc.h>
 
 SDRPP_MOD_INFO{
     /* Name:            */ "sddc_source",
-    /* Description:     */ "SDDC source module for SDR++",
-    /* Author:          */ "Jack Heinlein",
-    /* Version:         */ 0, 1, 0,
-    /* Max instances    */ 1
+    /* Description:     */ "SDDC Source Module",
+    /* Author:          */ "Ryzerth",
+    /* Version:         */ 0, 2, 0,
+    /* Max instances    */ -1
 };
 
 ConfigManager config;
 
+#define CONCAT(a, b) ((std::string(a) + b).c_str())
 
-const double sampleRates[] = {
-    32000000,  // 32 MSPS
-    16000000,  // 16 MSPS
-    8000000,   // 8 MSPS
-    4000000,   // 4 MSPS
-    2000000    // 2 MSPS
-};
-
-const char* sampleRatesTxt[] = {
-    "32 MSPS",
-    "16 MSPS", 
-    "8 MSPS",
-    "4 MSPS",
-    "2 MSPS"
-};
-
-class RadioHandlerWrapper {
-public:
-    RadioHandlerWrapper() {
-        flog::info("Creating USB Handler...");
-        fx3 = CreateUsbHandler();
-        if (fx3 == nullptr) {
-            flog::error("Failed to create USB handler");
-            handler = nullptr;
-            deviceFound = false;
-            return;
-        }
-
-        flog::info("Creating Radio Handler...");
-        try {
-            handler = new RadioHandlerClass();
-            
-            RadioModel model = handler->getModel();
-            switch(model) {
-                case RadioModel::BBRF103:
-                    flog::info("Found BBRF103 device");
-                    deviceFound = true;
-                    break;
-                case RadioModel::HF103:
-                    flog::info("Found HF103 device");
-                    deviceFound = true;
-                    break;
-                case RadioModel::RX888:
-                    flog::info("Found RX888 device");
-                    deviceFound = true;
-                    break;
-                case RadioModel::RX888r2:
-                    flog::info("Found RX888R2 device");
-                    deviceFound = true;
-                    break;
-                case RadioModel::RX888r3:
-                    flog::info("Found RX888R3 device");
-                    deviceFound = true;
-                    break;
-                case RadioModel::RX999:
-                    flog::info("Found RX999 device");
-                    deviceFound = true;
-                    break;
-                default:
-                    flog::error("No supported device found");
-                    deviceFound = false;
-                    if (handler) {
-                        delete handler;
-                        handler = nullptr;
-                    }
-                    if (fx3) {
-                        delete fx3;
-                        fx3 = nullptr;
-                    }
-                    return;
-            }
-
-            if (deviceFound) {
-                flog::info("RadioHandlerWrapper initialization complete");
-            }
-        }
-        catch (...) {
-            flog::error("Exception during RadioHandler creation");
-            if (handler) {
-                delete handler;
-                handler = nullptr;
-            }
-            if (fx3) {
-                delete fx3;
-                fx3 = nullptr;
-            }
-            deviceFound = false;
-        }
-    }
-
-    ~RadioHandlerWrapper() {
-        flog::info("Destroying RadioHandlerWrapper");
-        if (handler) {
-            flog::info("Deleting handler");
-            delete handler;
-        }
-        if (fx3) {
-            flog::info("Deleting fx3");
-            delete fx3;
-        }
-    }
-
-    bool Init(void (*callback)(void* context, const float* data, uint32_t len), void* ctx) {
-        if (!deviceFound || !handler || !fx3) {
-            flog::error("RadioHandler not initialized or device not found");
-            return false;
-        }
-        bool result = handler->Init(fx3, callback, nullptr, ctx);
-        flog::info("RadioHandler initialization {}", result ? "successful" : "failed");
-        return result;
-    }
-
-    void Start(int srateIdx) {
-        if (!deviceFound) {
-            flog::error("Cannot start - no device found");
-            return;
-        }
-        if (!handler) {
-            flog::error("Cannot start - not initialized");
-            return;
-        }
-        handler->Start(srateIdx);
-        flog::info("RadioHandler started with sample rate index {}", srateIdx);
-    }
-
-    void Stop() {
-        if (!handler || !deviceFound) return;
-        handler->Stop();
-    }
-
-    void Close() {
-        if (!handler || !deviceFound) return;
-        handler->Close();
-    }
-
-    RadioHandlerClass* getHandler() {
-        return handler;
-    }
-
-    operator bool() const {
-        return deviceFound && handler != nullptr && fx3 != nullptr;
-    }
-
-private:
-    fx3class* fx3 = nullptr;
-    RadioHandlerClass* handler = nullptr;
-    bool deviceFound = false;
-};
 
 class SDDCSourceModule : public ModuleManager::Instance {
 public:
-    SDDCSourceModule(std::string name);
-    ~SDDCSourceModule();
+    SDDCSourceModule(std::string name) {
+        this->name = name;
+
+        // Set firmware image path for debugging
+        sddc_set_firmware_path("C:/Users/ryzerth/Downloads/SDDC_FX3 (1).img");
+
+        sampleRate = 128e6;
+
+        // Initialize the DDC
+        ddc.init(&ddcIn, 50e6, 50e6, 50e6, 0.0);
+
+        handler.ctx = this;
+        handler.selectHandler = menuSelected;
+        handler.deselectHandler = menuDeselected;
+        handler.menuHandler = menuHandler;
+        handler.startHandler = start;
+        handler.stopHandler = stop;
+        handler.tuneHandler = tune;
+        handler.stream = &ddc.out;
+
+        // Refresh devices
+        refresh();
+
+        // Select device from config
+        config.acquire();
+        std::string devSerial = config.conf["device"];
+        config.release();
+        select(devSerial);
+
+        sigpath::sourceManager.registerSource("SDDC", &handler);
+    }
+
+    ~SDDCSourceModule() {
+        // Nothing to do
+    }
 
     void postInit() {}
-    void enable();
-    void disable();
-    bool isEnabled();
-    void refresh();
+
+    void enable() {
+        enabled = true;
+    }
+
+    void disable() {
+        enabled = false;
+    }
+
+    bool isEnabled() {
+        return enabled;
+    }
+
+    enum Port {
+        PORT_RF,
+        PORT_HF1,
+        PORT_HF2
+    };
 
 private:
-    void selectFirst();
-    void selectByName(std::string name);
-    void selectById(int id);
-    void loadConfig(json& conf);
+    std::string getBandwdithScaled(double bw) {
+        char buf[1024];
+        if (bw >= 1000000.0) {
+            sprintf(buf, "%.1lfMHz", bw / 1000000.0);
+        }
+        else if (bw >= 1000.0) {
+            sprintf(buf, "%.1lfKHz", bw / 1000.0);
+        }
+        else {
+            sprintf(buf, "%.1lfHz", bw);
+        }
+        return std::string(buf);
+    }
 
-    static void menuSelected(void* ctx);
-    static void menuDeselected(void* ctx);
-    static void start(void* ctx);
-    static void stop(void* ctx);
-    static void tune(double freq, void* ctx);
-    static void dataHandler(void* context, const float* data, uint32_t len);
-    static void menuHandler(void* ctx);
+    void refresh() {
+        devices.clear();
+        
+        // // Get device list
+        // sddc_devinfo_t* devList;
+        // int count = sddc_get_device_list(&devList);
+        // if (count < 0) {
+        //     flog::error("Failed to list SDDC devices: {}", count);
+        //     return;
+        // }
+
+        // // Add every device found
+        // for (int i = 0; i < count; i++) {
+        //     // Create device name
+        //     std::string name = sddc_model_to_string(devList[i].model);
+        //     name += '[';
+        //     name += devList[i].serial;
+        //     name += ']';
+
+        //     // Add an entry to the device list
+        //     devices.define(devList[i].serial, name, devList[i].serial);
+        // }
+
+        devices.define("0009072C00C40C32", "TESTING", "0009072C00C40C32");
+
+        // // Free the device list
+        // sddc_free_device_list(devList);
+    }
+
+    void select(const std::string& serial) {
+        // If there are no devices, give up
+        if (devices.empty()) {
+            selectedSerial.clear();
+            return;
+        }
+
+        // If the serial was not found, select the first available serial
+        if (!devices.keyExists(serial)) {
+            select(devices.key(0));
+            return;
+        }
+
+        // Get the ID in the list
+        int id = devices.keyId(serial);
+
+        // Open the device
+        sddc_dev_t* dev;
+        int err = sddc_open(serial.c_str(), &dev);
+        if (err) {
+            flog::error("Failed to open device: {}", err);
+            return;
+        }
+
+        // Generate samplerate list
+        samplerates.clear();
+        samplerates.define(4e6, "4 MHz", 4e6);
+        samplerates.define(8e6, "8 MHz", 8e6);
+        samplerates.define(16e6, "16 MHz", 16e6);
+        samplerates.define(32e6, "32 MHz", 32e6);
+        samplerates.define(64e6, "64 MHz", 64e6);
+
+        // // Define the ports
+        // ports.clear();
+        // ports.define("hf", "HF", PORT_RF);
+        // ports.define("vhf", "VHF", PORT_HF1);
+
+        // Close the device
+        sddc_close(dev);
+
+        // Save serial number
+        selectedSerial = serial;
+        devId = id;
+
+        // Load default options
+        sampleRate = 64e6;
+        srId = samplerates.valueId(sampleRate);
+        // port = PORT_RF;
+        // portId = ports.valueId(port);
+        // lnaGain = 0;
+        // vgaGain = 0;
+
+        // Load config
+        config.acquire();
+        if (config.conf["devices"][selectedSerial].contains("samplerate")) {
+            int desiredSr = config.conf["devices"][selectedSerial]["samplerate"];
+            if (samplerates.keyExists(desiredSr)) {
+                srId = samplerates.keyId(desiredSr);
+                sampleRate = samplerates[srId];
+            }
+        }
+        // if (config.conf["devices"][selectedSerial].contains("port")) {
+        //     std::string desiredPort = config.conf["devices"][selectedSerial]["port"];
+        //     if (ports.keyExists(desiredPort)) {
+        //         portId = ports.keyId(desiredPort);
+        //         port = ports[portId];
+        //     }
+        // }
+        // if (config.conf["devices"][selectedSerial].contains("lnaGain")) {
+        //     lnaGain = std::clamp<int>(config.conf["devices"][selectedSerial]["lnaGain"], FOBOS_LNA_GAIN_MIN, FOBOS_LNA_GAIN_MAX);
+        // }
+        // if (config.conf["devices"][selectedSerial].contains("vgaGain")) {
+        //     vgaGain = std::clamp<int>(config.conf["devices"][selectedSerial]["vgaGain"], FOBOS_VGA_GAIN_MIN, FOBOS_VGA_GAIN_MAX);
+        // }
+        config.release();
+
+        // Update the samplerate
+        core::setInputSampleRate(sampleRate);
+    }
+
+    static void menuSelected(void* ctx) {
+        SDDCSourceModule* _this = (SDDCSourceModule*)ctx;
+        core::setInputSampleRate(_this->sampleRate);
+        flog::info("SDDCSourceModule '{0}': Menu Select!", _this->name);
+    }
+
+    static void menuDeselected(void* ctx) {
+        SDDCSourceModule* _this = (SDDCSourceModule*)ctx;
+        flog::info("SDDCSourceModule '{0}': Menu Deselect!", _this->name);
+    }
+
+    static void start(void* ctx) {
+        SDDCSourceModule* _this = (SDDCSourceModule*)ctx;
+        if (_this->running) { return; }
+
+        // Open the device
+        sddc_error_t err = sddc_open(_this->selectedSerial.c_str(), &_this->openDev);
+        if (err) {
+            flog::error("Failed to open device: {}", (int)err);
+            return;
+        }
+
+        // // Get the selected port
+        // _this->port = _this->ports[_this->portId];
+
+        // Configure the device
+        sddc_set_samplerate(_this->openDev, _this->sampleRate * 2);
+
+        // // Configure the DDC
+        // if (_this->port == PORT_RF && _this->sampleRate >= 50e6) {
+        //     // Set the frequency
+        //     fobos_rx_set_frequency(_this->openDev, _this->freq, &actualFreq);
+        // }
+        // else if (_this->port == PORT_RF) {
+        //     // Set the frequency
+        //     fobos_rx_set_frequency(_this->openDev, _this->freq, &actualFreq);
+
+        //     // Configure and start the DDC for decimation only
+        //     _this->ddc.setInSamplerate(actualSr);
+        //     _this->ddc.setOutSamplerate(_this->sampleRate, _this->sampleRate);
+        //     _this->ddc.setOffset(0.0);
+        //     _this->ddc.start();
+        // }
+        // else {
+            // Configure and start the DDC
+            _this->ddc.setInSamplerate(_this->sampleRate * 2);
+            _this->ddc.setOutSamplerate(_this->sampleRate, _this->sampleRate);
+            _this->ddc.setOffset(_this->freq);
+            _this->ddc.start();
+        // }
+
+        // Compute buffer size (Lower than usual, but it's a workaround for their API having broken streaming)
+        _this->bufferSize = _this->sampleRate / 100.0;
+
+        // Start streaming
+        err = sddc_start(_this->openDev);
+        if (err) {
+            flog::error("Failed to start stream: {}", (int)err);
+            return;
+        }
+
+        // Start worker
+        _this->run = true;
+        _this->workerThread = std::thread(&SDDCSourceModule::worker, _this);
+        
+        _this->running = true;
+        flog::info("SDDCSourceModule '{0}': Start!", _this->name);
+    }
+
+    static void stop(void* ctx) {
+        SDDCSourceModule* _this = (SDDCSourceModule*)ctx;
+        if (!_this->running) { return; }
+        _this->running = false;
+
+        // Stop worker
+        _this->run = false;
+        if (_this->port == PORT_RF && _this->sampleRate >= 50e6) {
+            _this->ddc.out.stopWriter();
+            if (_this->workerThread.joinable()) { _this->workerThread.join(); }
+            _this->ddc.out.clearWriteStop();
+        }
+        else {
+            _this->ddcIn.stopWriter();
+            if (_this->workerThread.joinable()) { _this->workerThread.join(); }
+            _this->ddcIn.clearWriteStop();
+        }
+
+        // Stop streaming
+        sddc_stop(_this->openDev);
+
+        // Stop the DDC
+        _this->ddc.stop();
+
+        // Close the device
+        sddc_close(_this->openDev);
+
+        flog::info("SDDCSourceModule '{0}': Stop!", _this->name);
+    }
+
+    static void tune(double freq, void* ctx) {
+        SDDCSourceModule* _this = (SDDCSourceModule*)ctx;
+        if (_this->running) {
+            // if (_this->port == PORT_RF) {
+            //     double actual; // Dummy, don't care
+            //     //fobos_rx_set_frequency(_this->openDev, freq, &actual);
+            // }
+            // else {
+                _this->ddc.setOffset(freq);
+            // }
+        }
+        _this->freq = freq;
+        flog::info("SDDCSourceModule '{0}': Tune: {1}!", _this->name, freq);
+    }
+
+    static void menuHandler(void* ctx) {
+        SDDCSourceModule* _this = (SDDCSourceModule*)ctx;
+        
+        if (_this->running) { SmGui::BeginDisabled(); }
+
+        SmGui::FillWidth();
+        SmGui::ForceSync();
+        if (SmGui::Combo(CONCAT("##_sddc_dev_sel_", _this->name), &_this->devId, _this->devices.txt)) {
+            _this->select(_this->devices.key(_this->devId));
+            core::setInputSampleRate(_this->sampleRate);
+            config.acquire();
+            config.conf["device"] = _this->selectedSerial;
+            config.release(true);
+        }
+
+        if (SmGui::Combo(CONCAT("##_sddc_sr_sel_", _this->name), &_this->srId, _this->samplerates.txt)) {
+            _this->sampleRate = _this->samplerates.value(_this->srId);
+            core::setInputSampleRate(_this->sampleRate);
+            if (!_this->selectedSerial.empty()) {
+                config.acquire();
+                config.conf["devices"][_this->selectedSerial]["samplerate"] = _this->samplerates.key(_this->srId);
+                config.release(true);
+            }
+        }
+
+        SmGui::SameLine();
+        SmGui::FillWidth();
+        SmGui::ForceSync();
+        if (SmGui::Button(CONCAT("Refresh##_sddc_refr_", _this->name))) {
+            _this->refresh();
+            _this->select(_this->selectedSerial);
+            core::setInputSampleRate(_this->sampleRate);
+        }
+
+        // SmGui::LeftLabel("Antenna Port");
+        // SmGui::FillWidth();
+        // if (SmGui::Combo(CONCAT("##_sddc_port_", _this->name), &_this->portId, _this->ports.txt)) {
+        //     if (!_this->selectedSerial.empty()) {
+        //         config.acquire();
+        //         config.conf["devices"][_this->selectedSerial]["port"] = _this->ports.key(_this->portId);
+        //         config.release(true);
+        //     }
+        // }
+
+        if (_this->running) { SmGui::EndDisabled(); }
+
+        // if (_this->port == PORT_RF) {
+        //     SmGui::LeftLabel("LNA Gain");
+        //     SmGui::FillWidth();
+        //     if (SmGui::SliderInt(CONCAT("##_sddc_lna_gain_", _this->name), &_this->lnaGain, FOBOS_LNA_GAIN_MIN, FOBOS_LNA_GAIN_MAX)) {
+        //         if (_this->running) {
+        //             fobos_rx_set_lna_gain(_this->openDev, _this->lnaGain);
+        //         }
+        //         if (!_this->selectedSerial.empty()) {
+        //             config.acquire();
+        //             config.conf["devices"][_this->selectedSerial]["lnaGain"] = _this->lnaGain;
+        //             config.release(true);
+        //         }
+        //     }
+
+        //     SmGui::LeftLabel("VGA Gain");
+        //     SmGui::FillWidth();
+        //     if (SmGui::SliderInt(CONCAT("##_sddc_vga_gain_", _this->name), &_this->vgaGain, FOBOS_VGA_GAIN_MIN, FOBOS_VGA_GAIN_MAX)) {
+        //         if (_this->running) {
+        //             fobos_rx_set_vga_gain(_this->openDev, _this->vgaGain);
+        //         }
+        //         if (!_this->selectedSerial.empty()) {
+        //             config.acquire();
+        //             config.conf["devices"][_this->selectedSerial]["vgaGain"] = _this->vgaGain;
+        //             config.release(true);
+        //         }
+        //     }
+        // }
+    }
+
+    void worker() {
+        // // Select different processing depending on the mode
+        // if (port == PORT_RF && sampleRate >= 50e6) {
+        //     while (run) {
+        //         // Read samples
+        //         unsigned int sampCount = 0;
+        //         int err = fobos_rx_read_sync(openDev, (float*)ddc.out.writeBuf, &sampCount);
+        //         if (err) { break; }
+                
+        //         // Send out samples to the core
+        //         if (!ddc.out.swap(sampCount)) { break; }
+        //     }
+        // }
+        // else if (port == PORT_RF) {
+        //     while (run) {
+        //         // Read samples
+        //         unsigned int sampCount = 0;
+        //         int err = fobos_rx_read_sync(openDev, (float*)ddcIn.writeBuf, &sampCount);
+        //         if (err) { break; }
+                
+        //         // Send samples to the DDC
+        //         if (!ddcIn.swap(sampCount)) { break; }
+        //     }
+        // }
+        // else if (port == PORT_HF1) {
+        //     while (run) {
+        //         // Read samples
+        //         unsigned int sampCount = 0;
+        //         int err = fobos_rx_read_sync(openDev, (float*)ddcIn.writeBuf, &sampCount);
+        //         if (err) { break; }
+
+        //         // Null out the HF2 samples
+        //         for (int i = 0; i < sampCount; i++) {
+        //             ddcIn.writeBuf[i].im = 0.0f;
+        //         }
+                
+        //         // Send samples to the DDC
+        //         if (!ddcIn.swap(sampCount)) { break; }
+        //     }
+        // }
+        // else if (port == PORT_HF2) {
+            // Allocate the sample buffer
+            int16_t* buffer = dsp::buffer::alloc<int16_t>(bufferSize);
+            float* fbuffer = dsp::buffer::alloc<float>(bufferSize);
+            float* nullBuffer = dsp::buffer::alloc<float>(bufferSize);
+
+            // Clear the null buffer
+            dsp::buffer::clear(nullBuffer, bufferSize);
+
+            while (run) {
+                // Read samples
+                int err = sddc_rx(openDev, buffer, bufferSize);
+                if (err) { break; }
+
+                // Convert the samples to float
+                volk_16i_s32f_convert_32f(fbuffer, buffer, 32768.0f, bufferSize);
+
+                // Interleave into a complex value
+                volk_32f_x2_interleave_32fc((lv_32fc_t*)ddcIn.writeBuf, fbuffer, nullBuffer, bufferSize);
+                
+                // Send samples to the DDC
+                if (!ddcIn.swap(bufferSize)) { break; }
+            }
+
+            // Free the buffer
+            dsp::buffer::free(buffer);
+        // }
+    }
 
     std::string name;
-    RadioHandlerWrapper* radio = nullptr;
     bool enabled = true;
-    dsp::stream<dsp::complex_t> stream;
+    double sampleRate;
     SourceManager::SourceHandler handler;
     bool running = false;
     double freq;
 
-    std::string selectedDevName = "";
+    OptionList<std::string, std::string> devices;
+    OptionList<int, int> samplerates;
+    OptionList<std::string, Port> ports;
     int devId = 0;
-    int srId = 0; 
-    int devCount = 0;
+    int srId = 0;
+    int portId = 0;
+    Port port;
+    int lnaGain = 0;
+    int vgaGain = 0;
+    std::string selectedSerial;
 
-    double sampleRate;
-    int rfMode = HFMODE;  // Changed from HF_MODE to HFMODE
+    sddc_dev_t* openDev;
 
-    // HF Mode gains
-    float hfRFGain = 0.0f;    // -31.5 to 0 dB, 0.5dB steps
-    float hfIFGain = 0.0f;    // LOW_MODE(0-18) or HIGH_MODE(19+)
-    bool hfGainMode = false;   // false=LOW_MODE, true=HIGH_MODE
+    int bufferSize;
+    std::thread workerThread;
+    std::atomic<bool> run = false;
 
-    // VHF Mode gains
-    float vhfRFGain = 0.0f;   // 29 steps from rf_steps table
-    float vhfIFGain = 0.0f;   // 16 steps from if_steps table
-    bool gainAuto = true;
-
-    bool dither = false;
-    bool random = false;
-    bool hfBias = false;
-    bool vhfBias = false;
-    float freqCorr = 0.0f;
-
-    const float* rf_steps = nullptr;
-    const float* if_steps = nullptr;
-    int rf_steps_count = 0;
-    int if_steps_count = 0;
-
-    std::vector<std::string> devNames;
-    std::string devListTxt;
-    std::string sampleRateListTxt;
+    dsp::stream<dsp::complex_t> ddcIn;
+    dsp::channel::RxVFO ddc;
 };
-
-SDDCSourceModule::SDDCSourceModule(std::string name) {
-    this->name = name;
-    
-    // Initialize parameters
-    hfRFGain = 0.0f;
-    hfIFGain = 0.0f;
-    hfGainMode = false;
-    vhfRFGain = 0.0f;
-    vhfIFGain = 0.0f;
-    gainAuto = true;
-
-    dither = false;
-    random = false;
-    hfBias = false;
-    vhfBias = false;
-    freqCorr = 0.0f;
-
-    sampleRate = sampleRates[0];
-
-    handler.ctx = this;
-    handler.selectHandler = menuSelected;
-    handler.deselectHandler = menuDeselected;
-    handler.menuHandler = menuHandler;
-    handler.startHandler = start;
-    handler.stopHandler = stop;
-    handler.tuneHandler = tune;
-    handler.stream = &stream;
-
-    for (int i = 0; i < sizeof(sampleRates)/sizeof(sampleRates[0]); i++) {
-        sampleRateListTxt += sampleRatesTxt[i];
-        sampleRateListTxt += '\0';
-    }
-
-    refresh();
-
-    config.acquire();
-    if (!config.conf["device"].is_string()) {
-        selectedDevName = "";
-        config.conf["device"] = "";
-    }
-    else {
-        selectedDevName = config.conf["device"];
-    }
-    config.release(true);
-    selectByName(selectedDevName);
-
-    sigpath::sourceManager.registerSource("SDDC", &handler);
-}
-
-SDDCSourceModule::~SDDCSourceModule() {
-    stop(this);
-    sigpath::sourceManager.unregisterSource("SDDC");
-    if (radio) delete radio;
-}
-
-void SDDCSourceModule::enable() {
-    enabled = true;
-}
-
-void SDDCSourceModule::disable() {
-    enabled = false;
-}
-
-bool SDDCSourceModule::isEnabled() {
-    return enabled;
-}
-
-void SDDCSourceModule::refresh() {
-    devNames.clear();
-    devListTxt = "";
-    devCount = 0;
-
-    // Try to create temporary handler to check device presence
-    std::unique_ptr<RadioHandlerWrapper> tempRadio(new RadioHandlerWrapper());
-    if (!tempRadio || !*tempRadio) {
-        flog::warn("No SDDC devices found");
-        return;
-    }
-
-    // Device found
-    devCount = 1;
-    devNames.push_back("RX888 MK2");
-    devListTxt = "RX888 MK2\0";
-}
-
-void SDDCSourceModule::selectFirst() {
-    if (devCount > 0) {
-        selectById(0);
-    }
-}
-
-void SDDCSourceModule::selectByName(std::string name) {
-    for (int i = 0; i < devCount; i++) {
-        if (name == devNames[i]) {
-            selectById(i);
-            return;
-        }
-    }
-    selectFirst();
-}
-
-void SDDCSourceModule::selectById(int id) {
-    if (devCount <= 0) return;
-    selectedDevName = devNames[id];
-    devId = id;
-
-    if (radio) {
-        delete radio;
-    }
-    radio = new RadioHandlerWrapper();
-    if (!radio->Init(dataHandler, this)) {
-        selectedDevName = "";
-        delete radio;
-        radio = nullptr;
-        return;
-    }
-
-    // Get initial gain steps
-    RadioHandlerClass* handler = radio->getHandler();
-    handler->GetRFAttSteps(&rf_steps);
-    rf_steps_count = handler->GetRFAttSteps(&rf_steps);
-    handler->GetIFGainSteps(&if_steps);
-    if_steps_count = handler->GetIFGainSteps(&if_steps);
-
-    bool created = false;
-    config.acquire();
-    if (!config.conf["devices"].contains(selectedDevName)) {
-        created = true;
-        config.conf["devices"][selectedDevName]["sampleRate"] = 32000000;
-        config.conf["devices"][selectedDevName]["rfMode"] = rfMode;
-        config.conf["devices"][selectedDevName]["hfRFGain"] = hfRFGain;
-        config.conf["devices"][selectedDevName]["hfIFGain"] = hfIFGain;
-        config.conf["devices"][selectedDevName]["hfGainMode"] = hfGainMode;
-        config.conf["devices"][selectedDevName]["vhfRFGain"] = vhfRFGain;
-        config.conf["devices"][selectedDevName]["vhfIFGain"] = vhfIFGain;
-        config.conf["devices"][selectedDevName]["gainAuto"] = gainAuto;
-        config.conf["devices"][selectedDevName]["dither"] = dither;
-        config.conf["devices"][selectedDevName]["random"] = random;
-        config.conf["devices"][selectedDevName]["hfBias"] = hfBias;
-        config.conf["devices"][selectedDevName]["vhfBias"] = vhfBias;
-        config.conf["devices"][selectedDevName]["freqCorr"] = freqCorr;
-    }
-
-    loadConfig(config.conf["devices"][selectedDevName]);
-    config.release(created);
-
-    // Initial radio setup
-    handler->UptDither(dither);
-    handler->UptRand(random);
-    handler->UpdBiasT_HF(hfBias);
-    handler->UpdBiasT_VHF(vhfBias);
-
-    if (rfMode == VHFMODE) {
-        handler->UpdatemodeRF(VHFMODE);
-        if (!gainAuto) {
-            handler->UpdateattRF(vhfRFGain);
-            handler->UpdateIFGain(vhfIFGain);
-        }
-    } else {
-        handler->UpdatemodeRF(HFMODE);
-        handler->UpdateattRF(hfRFGain);
-        handler->UpdateIFGain(hfGainMode ? (hfIFGain + 0x80) : hfIFGain);
-    }
-}
-
-void SDDCSourceModule::loadConfig(json& conf) {
-    if (conf.contains("sampleRate")) {
-        double selectedSr = conf["sampleRate"];
-        for (int i = 0; i < sizeof(sampleRates)/sizeof(sampleRates[0]); i++) {
-            if (sampleRates[i] == selectedSr) {
-                srId = i;
-                sampleRate = selectedSr;
-                break;
-            }
-        }
-    }
-    if (conf.contains("rfMode")) rfMode = conf["rfMode"];
-    if (conf.contains("hfRFGain")) hfRFGain = conf["hfRFGain"];
-    if (conf.contains("hfIFGain")) hfIFGain = conf["hfIFGain"];
-    if (conf.contains("hfGainMode")) hfGainMode = conf["hfGainMode"];
-    if (conf.contains("vhfRFGain")) vhfRFGain = conf["vhfRFGain"];
-    if (conf.contains("vhfIFGain")) vhfIFGain = conf["vhfIFGain"];
-    if (conf.contains("gainAuto")) gainAuto = conf["gainAuto"];
-    if (conf.contains("dither")) dither = conf["dither"];
-    if (conf.contains("random")) random = conf["random"];
-    if (conf.contains("hfBias")) hfBias = conf["hfBias"];
-    if (conf.contains("vhfBias")) vhfBias = conf["vhfBias"];
-    if (conf.contains("freqCorr")) freqCorr = conf["freqCorr"];
-}
-
-void SDDCSourceModule::menuSelected(void* ctx) {
-    SDDCSourceModule* _this = (SDDCSourceModule*)ctx;
-    core::setInputSampleRate(_this->sampleRate);
-}
-
-void SDDCSourceModule::menuDeselected(void* ctx) {
-    SDDCSourceModule* _this = (SDDCSourceModule*)ctx;
-}
-
-void SDDCSourceModule::start(void* ctx) {
-    SDDCSourceModule* _this = (SDDCSourceModule*)ctx;
-    if (_this->running || _this->selectedDevName == "" || _this->radio == nullptr) return;
-
-    _this->radio->Start(_this->srId);
-    _this->running = true;
-}
-
-void SDDCSourceModule::stop(void* ctx) {
-    SDDCSourceModule* _this = (SDDCSourceModule*)ctx;
-    if (!_this->running || _this->radio == nullptr) return;
-
-    _this->radio->Stop();
-    _this->running = false;
-}
-
-void SDDCSourceModule::tune(double freq, void* ctx) {
-    SDDCSourceModule* _this = (SDDCSourceModule*)ctx;
-    if (_this->running && _this->radio) {
-        RadioHandlerClass* handler = _this->radio->getHandler();
-        rf_mode newMode = handler->PrepareLo(freq);
-        if (newMode != handler->GetmodeRF()) {
-            _this->rfMode = (newMode == VHFMODE) ? VHFMODE : HFMODE;
-            handler->UpdatemodeRF(newMode);
-
-            if (_this->rfMode == VHFMODE) {
-                if (!_this->gainAuto) {
-                    handler->UpdateattRF(_this->vhfRFGain);
-                    handler->UpdateIFGain(_this->vhfIFGain);
-                }
-            } else {
-                handler->UpdateattRF(_this->hfRFGain);
-                handler->UpdateIFGain(_this->hfGainMode ? (_this->hfIFGain + 0x80) : _this->hfIFGain);
-            }
-        }
-        handler->TuneLO(freq);
-    }
-    _this->freq = freq;
-}
-
-void SDDCSourceModule::dataHandler(void* context, const float* data, uint32_t len) {
-    SDDCSourceModule* _this = (SDDCSourceModule*)context;
-
-    int count = len;
-    for (int i = 0; i < count; i++) {
-        _this->stream.writeBuf[i].re = data[i*2];
-        _this->stream.writeBuf[i].im = data[i*2 + 1];
-    }
-
-    if (!_this->stream.swap(count)) return;
-}
-
-void SDDCSourceModule::menuHandler(void* ctx) {
-    SDDCSourceModule* _this = (SDDCSourceModule*)ctx;
-    RadioHandlerClass* handler = _this->radio ? _this->radio->getHandler() : nullptr;
-
-    if (_this->running) { SmGui::BeginDisabled(); }
-
-    // Device selection
-    SmGui::FillWidth();
-    if (SmGui::Combo(CONCAT("##_sddc_dev_sel_", _this->name), &_this->devId, _this->devListTxt.c_str())) {
-        _this->selectById(_this->devId);
-        core::setInputSampleRate(_this->sampleRate);
-        if (_this->selectedDevName != "") {
-            config.acquire();
-            config.conf["device"] = _this->selectedDevName;
-            config.release(true);
-        }
-    }
-
-    // Sample rate selection
-    SmGui::FillWidth();
-    if (SmGui::Combo(CONCAT("##_sddc_sr_sel_", _this->name), &_this->srId, _this->sampleRateListTxt.c_str())) {
-        _this->sampleRate = sampleRates[_this->srId];
-        core::setInputSampleRate(_this->sampleRate);
-        if (_this->selectedDevName != "") {
-            config.acquire();
-            config.conf["devices"][_this->selectedDevName]["sampleRate"] = _this->sampleRate;
-            config.release(true);
-        }
-    }
-
-    // Refresh button
-    SmGui::FillWidth();
-    if (SmGui::Button(CONCAT("Refresh##_sddc_refr_", _this->name))) {
-        _this->refresh();
-        _this->selectByName(_this->selectedDevName);
-        core::setInputSampleRate(_this->sampleRate);
-    }
-
-    if (_this->running) { SmGui::EndDisabled(); }
-
-    char buf[64];
-
-    // RF Mode indicator
-    sprintf(buf, "Current Mode: %s", _this->rfMode == VHFMODE ? "VHF" : "HF");
-    SmGui::Text(buf);
-
-    // Gain Controls
-    SmGui::BeginGroup();
-    SmGui::Text("Gain Control");
-
-    if (_this->rfMode == VHFMODE) {
-        // VHF Mode Gain Controls
-        if (SmGui::Checkbox(CONCAT("Auto Gain##_sddc_auto_gain_", _this->name), &_this->gainAuto)) {
-            if (_this->running && handler) {
-                if (_this->gainAuto) {
-                    _this->vhfRFGain = 0.0f;
-                    _this->vhfIFGain = 0.0f;
-                    handler->UpdateattRF(_this->vhfRFGain);
-                    handler->UpdateIFGain(_this->vhfIFGain);
-                }
-            }
-            if (_this->selectedDevName != "") {
-                config.acquire();
-                config.conf["devices"][_this->selectedDevName]["gainAuto"] = _this->gainAuto;
-                config.release(true);
-            }
-        }
-
-        if (!_this->gainAuto) {
-            // VHF RF Gain (29 steps)
-            if (SmGui::SliderInt(CONCAT("RF Gain Step##_sddc_vhf_rf_gain_", _this->name),
-                               (int*)&_this->vhfRFGain, 0, _this->rf_steps_count - 1)) {
-                if (_this->running && handler) {
-                    handler->UpdateattRF(_this->vhfRFGain);
-                }
-                if (_this->selectedDevName != "") {
-                    config.acquire();
-                    config.conf["devices"][_this->selectedDevName]["vhfRFGain"] = _this->vhfRFGain;
-                    config.release(true);
-                }
-            }
-            sprintf(buf, "RF Gain: %.1f dB", _this->rf_steps[(int)_this->vhfRFGain]);
-            SmGui::Text(buf);
-
-            // VHF IF Gain (16 steps)
-            if (SmGui::SliderInt(CONCAT("IF Gain Step##_sddc_vhf_if_gain_", _this->name),
-                               (int*)&_this->vhfIFGain, 0, _this->if_steps_count - 1)) {
-                if (_this->running && handler) {
-                    handler->UpdateIFGain(_this->vhfIFGain);
-                }
-                if (_this->selectedDevName != "") {
-                    config.acquire();
-                    config.conf["devices"][_this->selectedDevName]["vhfIFGain"] = _this->vhfIFGain;
-                    config.release(true);
-                }
-            }
-            sprintf(buf, "IF Gain: %.1f dB", _this->if_steps[(int)_this->vhfIFGain]);
-            SmGui::Text(buf);
-        }
-    }
-    else {
-        // HF Mode Gain Controls
-        // RF Attenuation (-31.5dB to 0dB, 0.5dB steps)
-        if (SmGui::SliderFloatWithSteps(CONCAT("RF Attenuation##_sddc_hf_rf_att_", _this->name),
-                                      &_this->hfRFGain, -31.5f, 0.0f, 0.5f,
-                                      SmGui::FMT_STR_FLOAT_ONE_DECIMAL)) {
-            if (_this->running && handler) {
-                handler->UpdateattRF(abs(_this->hfRFGain * 2)); // Convert to steps
-            }
-            if (_this->selectedDevName != "") {
-                config.acquire();
-                config.conf["devices"][_this->selectedDevName]["hfRFGain"] = _this->hfRFGain;
-                config.release(true);
-            }
-        }
-
-        // IF Gain Mode selection
-        if (SmGui::Checkbox(CONCAT("High Gain Mode##_sddc_hf_gain_mode_", _this->name), &_this->hfGainMode)) {
-            if (_this->running && handler) {
-                handler->UpdateIFGain(_this->hfGainMode ? (_this->hfIFGain + 0x80) : _this->hfIFGain);
-            }
-            if (_this->selectedDevName != "") {
-                config.acquire();
-                config.conf["devices"][_this->selectedDevName]["hfGainMode"] = _this->hfGainMode;
-                config.release(true);
-            }
-        }
-
-        // IF Gain Level
-        int maxSteps = _this->hfGainMode ? 45 : 18; // Different ranges for HIGH/LOW modes
-        if (SmGui::SliderInt(CONCAT("IF Gain Level##_sddc_hf_if_gain_", _this->name),
-                           (int*)&_this->hfIFGain, 0, maxSteps)) {
-            if (_this->running && handler) {
-                handler->UpdateIFGain(_this->hfGainMode ? (_this->hfIFGain + 0x80) : _this->hfIFGain);
-            }
-            if (_this->selectedDevName != "") {
-                config.acquire();
-                config.conf["devices"][_this->selectedDevName]["hfIFGain"] = _this->hfIFGain;
-                config.release(true);
-            }
-        }
-    }
-    SmGui::EndGroup();
-
-    // ADC Settings
-    SmGui::BeginGroup();
-    SmGui::Text("ADC Settings");
-    if (SmGui::Checkbox(CONCAT("Dither##_sddc_dither_", _this->name), &_this->dither)) {
-        if (_this->running && handler) {
-            handler->UptDither(_this->dither);
-        }
-        if (_this->selectedDevName != "") {
-            config.acquire();
-            config.conf["devices"][_this->selectedDevName]["dither"] = _this->dither;
-            config.release(true);
-        }
-    }
-
-    if (SmGui::Checkbox(CONCAT("Randomizer##_sddc_random_", _this->name), &_this->random)) {
-        if (_this->running && handler) {
-            handler->UptRand(_this->random);
-        }
-        if (_this->selectedDevName != "") {
-            config.acquire();
-            config.conf["devices"][_this->selectedDevName]["random"] = _this->random;
-            config.release(true);
-        }
-    }
-    SmGui::EndGroup();
-
-    // Bias-T Controls
-    SmGui::BeginGroup();
-    SmGui::Text("Bias-T");
-    if (SmGui::Checkbox(CONCAT("HF##_sddc_hf_bias_", _this->name), &_this->hfBias)) {
-        if (_this->running && handler) {
-            handler->UpdBiasT_HF(_this->hfBias);
-        }
-        if (_this->selectedDevName != "") {
-            config.acquire();
-            config.conf["devices"][_this->selectedDevName]["hfBias"] = _this->hfBias;
-            config.release(true);
-        }
-    }
-
-    SmGui::SameLine();
-    if (SmGui::Checkbox(CONCAT("VHF##_sddc_vhf_bias_", _this->name), &_this->vhfBias)) {
-        if (_this->running && handler) {
-            handler->UpdBiasT_VHF(_this->vhfBias);
-        }
-        if (_this->selectedDevName != "") {
-            config.acquire();
-            config.conf["devices"][_this->selectedDevName]["vhfBias"] = _this->vhfBias;
-            config.release(true);
-        }
-    }
-    SmGui::EndGroup();
-
-    // Frequency Correction
-    if (!_this->running) {
-        if (SmGui::SliderFloatWithSteps(CONCAT("PPM##_sddc_ppm_", _this->name), 
-                                      &_this->freqCorr, 
-                                      -100.0f, 
-                                      100.0f,
-                                      0.1f,
-                                      SmGui::FMT_STR_FLOAT_ONE_DECIMAL)) {
-            if (_this->selectedDevName != "") {
-                config.acquire();
-                config.conf["devices"][_this->selectedDevName]["freqCorr"] = _this->freqCorr;
-                config.release(true);
-            }
-        }
-    }
-}
 
 MOD_EXPORT void _INIT_() {
     json def = json({});
@@ -720,7 +502,7 @@ MOD_EXPORT ModuleManager::Instance* _CREATE_INSTANCE_(std::string name) {
     return new SDDCSourceModule(name);
 }
 
-MOD_EXPORT void _DELETE_INSTANCE_(ModuleManager::Instance* instance) {
+MOD_EXPORT void _DELETE_INSTANCE_(void* instance) {
     delete (SDDCSourceModule*)instance;
 }
 
