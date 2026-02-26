@@ -35,6 +35,9 @@ cp 'C:/Program Files/PothosSDR/bin/hackrf.dll' sdrpp_windows_x64/
 
 cp $build_dir/source_modules/hermes_source/Release/hermes_source.dll sdrpp_windows_x64/modules/
 
+cp $build_dir/source_modules/hydrasdr_source/Release/hydrasdr_source.dll sdrpp_windows_x64/modules/
+cp 'C:/Program Files (x86)/hydrasdr_all/bin/hydrasdr.dll' sdrpp_windows_x64/
+
 cp $build_dir/source_modules/limesdr_source/Release/limesdr_source.dll sdrpp_windows_x64/modules/
 cp 'C:/Program Files/PothosSDR/bin/LimeSuite.dll' sdrpp_windows_x64/
 
@@ -82,11 +85,19 @@ cp $build_dir/sink_modules/network_sink/Release/network_sink.dll sdrpp_windows_x
 
 
 # Copy decoder modules
+cp $build_dir/decoder_modules/atv_decoder/Release/atv_decoder.dll sdrpp_windows_x64/modules/
+
+cp $build_dir/decoder_modules/m17_decoder/Release/m17_decoder.dll sdrpp_windows_x64/modules/
+cp "C:/Program Files/codec2/lib/libcodec2.dll" sdrpp_windows_x64/
+
+cp $build_dir/decoder_modules/meteor_demodulator/Release/meteor_demodulator.dll sdrpp_windows_x64/modules/
 cp $build_dir/decoder_modules/radio/Release/radio.dll sdrpp_windows_x64/modules/
 
 #cp $build_dir/decoder_modules/vhfvoiceradio/Release/vhfvoiceradio.dll sdrpp_windows_x64/modules/
 
 # Copy misc modules
+cp $build_dir/misc_modules/discord_integration/Release/discord_integration.dll sdrpp_windows_x64/modules/
+
 cp $build_dir/misc_modules/frequency_manager/Release/frequency_manager.dll sdrpp_windows_x64/modules/
 
 cp $build_dir/misc_modules/iq_exporter/Release/iq_exporter.dll sdrpp_windows_x64/modules/

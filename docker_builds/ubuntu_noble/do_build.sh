@@ -6,7 +6,7 @@ cd /root
 apt update
 apt install -y build-essential cmake git libfftw3-dev libglfw3-dev libvolk-dev libzstd-dev libairspyhf-dev libairspy-dev \
             libiio-dev libad9361-dev librtaudio-dev libhackrf-dev librtlsdr-dev libbladerf-dev liblimesuite-dev p7zip-full wget portaudio19-dev \
-            autoconf libtool xxd libspdlog-dev libsoapysdr-dev libuhd-dev libitpp-dev
+            libcodec2-dev autoconf libtool xxd libspdlog-dev
 
 # Install SDRPlay libraries
 SDRPLAY_ARCH=$(dpkg --print-architecture)
@@ -46,37 +46,21 @@ make -j2
 make install
 cd ../../
 
-cd SDRPlusPlus
+# Install libhydrasdr
+git clone https://github.com/hydrasdr/rfone_host
+cd rfone_host
 mkdir build
 cd build
 cmake ..
+make -j2
+make install
+cd ../../
+
+cd SDRPlusPlus
+mkdir build
+cd build
+cmake .. -DOPT_BUILD_BLADERF_SOURCE=ON -DOPT_BUILD_LIMESDR_SOURCE=ON -DOPT_BUILD_SDRPLAY_SOURCE=ON -DOPT_BUILD_NEW_PORTAUDIO_SINK=ON -DOPT_BUILD_M17_DECODER=ON -DOPT_BUILD_PERSEUS_SOURCE=ON -DOPT_BUILD_RFNM_SOURCE=ON -DOPT_BUILD_FOBOSSDR_SOURCE=ON -DOPT_BUILD_HYDRASDR_SOURCE=ON
 make VERBOSE=1 -j2
 
-mkdir -p /root/SDRPlusPlus/sdrpp_debian_amd64/DEBIAN
-
-# Create package info
-echo Create package info
-echo Package: sdrpp >> /root/SDRPlusPlus/sdrpp_debian_amd64/DEBIAN/control
-echo Version: 1.2.1$BUILD_NO >> /root/SDRPlusPlus/sdrpp_debian_amd64/DEBIAN/control
-echo Maintainer: Serhii Yehorov >> /root/SDRPlusPlus/sdrpp_debian_amd64/DEBIAN/control
-echo Architecture: all >> /root/SDRPlusPlus/sdrpp_debian_amd64/DEBIAN/control
-echo Description: Bloat-free SDR receiver software >> /root/SDRPlusPlus/sdrpp_debian_amd64/DEBIAN/control
-echo Depends: libiio0, libad9361-0, libhackrf0, libairspy0, libairspyhf1, librtaudio7, librtlsdr0, libbladerf2, liblimesuite23.11-1, libuhd4.7.0, libglfw3, sdrplay-api, libsoapysdr0.8 >> /root/SDRPlusPlus/sdrpp_debian_amd64/DEBIAN/control
-
-# Copying files
-cd /root/SDRPlusPlus/build
-make install DESTDIR=/root/SDRPlusPlus/sdrpp_debian_amd64
-mkdir -p /root/SDRPlusPlus/sdrpp_debian_amd64/usr/include/sdrpp_core/src
-mkdir -p /root/SDRPlusPlus/sdrpp_debian_amd64/usr/share/cmake/Modules
-cd /root/SDRPlusPlus/core/src
-find . -regex ".*\.\(h\|hpp\)" -exec cp --parents \{\} /root/SDRPlusPlus/sdrpp_debian_amd64/usr/include/sdrpp_core/src \;
-cp /root/SDRPlusPlus/sdrpp_module.cmake /root/SDRPlusPlus/sdrpp_debian_amd64/usr/share/cmake/Modules
-
-# Create package
-echo Create package
-cd /root/SDRPlusPlus/
-dpkg-deb --build sdrpp_debian_amd64
-
-# Cleanup
-echo Cleanup
-rm -rf /root/SDRPlusPlus/sdrpp_debian_amd64
+cd ..
+sh make_debian_package.sh ./build 'libfftw3-dev, libglfw3-dev, libvolk-dev, librtaudio-dev, libzstd-dev'
