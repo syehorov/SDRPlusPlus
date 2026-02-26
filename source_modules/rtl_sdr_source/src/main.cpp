@@ -123,7 +123,7 @@ public:
         char buf[1024];
         char venBuf[256];
         char prodBuf[256];
-        char snBuf[1024];
+        char snBuf[256];
         for (int i = 0; i < devCount; i++) {
             // Gather device info
             const char* devName = rtlsdr_get_device_name(i);
@@ -136,6 +136,8 @@ public:
             else {
                 sprintf(buf, "%s [%s]##%d", devName, (!snErr && snBuf[0]) ? snBuf : "No Serial", i);
             }
+
+
             // Add device to list
             devNames.push_back(buf);
             devListTxt += buf;
