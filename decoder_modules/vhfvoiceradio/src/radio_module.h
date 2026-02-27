@@ -496,9 +496,9 @@ private:
             std::stringstream ctcss_freq_stream;
             ctcss_freq_stream << std::fixed << std::setprecision(1) << _this->ctcssSquelch.getCurrentCTCSSFreq();
             if(_this->ctcssSquelch.getCurrentCTCSSActive()) {
-                ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), CONCAT("Current tone: ", ctcss_freq_stream.str()));
+                ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "%s", CONCAT("Current tone: ", ctcss_freq_stream.str()));
             } else {
-                ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), CONCAT("Last       tone: ", ctcss_freq_stream.str()));
+                ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "%s", CONCAT("Last       tone: ", ctcss_freq_stream.str()));
             }
             ImGui::SameLine();
             if(ImGui::Button("Copy to CTCSS##_radio_copy_to_ctcss_")) {
@@ -522,9 +522,9 @@ private:
             std::stringstream dcs_code_stream;
             dcs_code_stream << "+" << std::fixed << std::setprecision(1) << _this->dcsSquelch.getCurrentDCSPCode() << "-" << std::fixed << std::setprecision(1) << _this->dcsSquelch.getCurrentDCSNCode();
             if(_this->dcsSquelch.getCurrentDCSActive()) {
-                ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), CONCAT("Current code: ", dcs_code_stream.str()));
+                ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "%s", CONCAT("Current code: ", dcs_code_stream.str()));
             } else {
-                ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), CONCAT("Last       code: ", dcs_code_stream.str()));
+                ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "%s", CONCAT("Last       code: ", dcs_code_stream.str()));
             }
             ImGui::SameLine();
             if(ImGui::Button("Copy to DCS##_radio_copy_to_dcs_")) {
