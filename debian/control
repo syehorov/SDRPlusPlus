@@ -2,7 +2,7 @@ Source: sdrpp
 Section: hamradio
 Priority: optional
 Maintainer: Serhii Yehorov <s.yegorov@gmail.com>
-Build-Depends: debhelper-compat (= 13), cmake, g++, libitpp-dev, libiio-dev, libad9361-dev, libhackrf-dev, libairspy-dev, libairspyhf-dev, librtaudio-dev, librtlsdr-dev, libbladerf-dev, liblimesuite-dev, libuhd-dev, libglfw3-dev, sdrplay-api, libsoapysdr-dev, libvolk-dev
+Build-Depends: debhelper-compat (= 13), cmake, g++, libitpp-dev, libiio-dev, libad9361-dev, libhackrf-dev, libairspy-dev, libairspyhf-dev, librtaudio-dev, librtlsdr-dev, libbladerf-dev, liblimesuite-dev, libuhd-dev, libglfw3-dev, sdrplay-api, libsoapysdr-dev, libvolk-dev, libzstd-dev, portaudio19-dev, libmp3lame-dev
 Standards-Version: 4.6.2
 Homepage: https://sdrpp.org/
 Rules-Requires-Root: no
