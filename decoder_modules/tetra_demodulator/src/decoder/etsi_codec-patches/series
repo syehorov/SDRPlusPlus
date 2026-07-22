@@ -1,5 +1,0 @@
-makefile-cleanups.patch
-fix_64bit.patch
-round_private.patch
-filename-case.patch
-log_stderr.patch
