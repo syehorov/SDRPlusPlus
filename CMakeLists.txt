@@ -306,14 +306,6 @@ if (OPT_BUILD_WEATHER_SAT_DECODER)
 add_subdirectory("decoder_modules/weather_sat_decoder")
 endif (OPT_BUILD_WEATHER_SAT_DECODER)
 
-if (OPT_BUILD_TETRA_DEMODULATOR)
-add_subdirectory("decoder_modules/tetra_demodulator")
-endif (OPT_BUILD_TETRA_DEMODULATOR)
-
-if (OPT_BUILD_VHFVOICERADIO)
-add_subdirectory("decoder_modules/vhfvoiceradio")
-endif (OPT_BUILD_VHFVOICERADIO)
-
 # Misc
 if (OPT_BUILD_DISCORD_PRESENCE)
 add_subdirectory("misc_modules/discord_integration")
