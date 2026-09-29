@@ -1,16 +1,19 @@
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -406,6 +406,17 @@
+@@ -404,9 +404,35 @@
+ # cmake .. "-DCMAKE_TOOLCHAIN_FILE=C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake" -DOPT_BUILD_BLADERF_SOURCE=ON -DOPT_BUILD_LIMESDR_SOURCE=ON -DOPT_BUILD_SDRPLAY_SOURCE=ON -DOPT_BUILD_M17_DECODER=ON -DOPT_BUILD_SCANNER=ON -DOPT_BUILD_SCHEDULER=ON -DOPT_BUILD_USRP_SOURCE=ON -DOPT_BUILD_PAGER_DECODER=ON
+ 
  # Create module cmake file
  configure_file(${CMAKE_SOURCE_DIR}/sdrpp_module.cmake ${CMAKE_CURRENT_BINARY_DIR}/sdrpp_module.cmake @ONLY)
  
-+set(SDRPP_CORE_ROOT "${CMAKE_INSTALL_PREFIX}/include/sdrpp")
++set(SDRPP_ROOT "${CMAKE_INSTALL_PREFIX}/include/sdrpp/")
 +configure_file(${CMAKE_SOURCE_DIR}/sdrpp_module.cmake ${CMAKE_CURRENT_BINARY_DIR}/sdrpp_module.cmake.devel @ONLY)
 +install(FILES ${CMAKE_CURRENT_BINARY_DIR}/sdrpp_module.cmake.devel
 +        DESTINATION lib/cmake/sdrpp
 +        RENAME sdrpp_module.cmake)
 +
-+install(DIRECTORY ${CMAKE_SOURCE_DIR}/core/src/
++# Headers needed to build out-of-tree plugins
++install(DIRECTORY ${CMAKE_SOURCE_DIR}/
 +        DESTINATION include/sdrpp
 +        FILES_MATCHING PATTERN "*.h")
 +
