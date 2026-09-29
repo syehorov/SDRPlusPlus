@@ -1,0 +1,19 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -406,6 +406,17 @@
+ # Create module cmake file
+ configure_file(${CMAKE_SOURCE_DIR}/sdrpp_module.cmake ${CMAKE_CURRENT_BINARY_DIR}/sdrpp_module.cmake @ONLY)
+ 
++set(SDRPP_CORE_ROOT "${CMAKE_INSTALL_PREFIX}/include/sdrpp")
++configure_file(${CMAKE_SOURCE_DIR}/sdrpp_module.cmake ${CMAKE_CURRENT_BINARY_DIR}/sdrpp_module.cmake.devel @ONLY)
++install(FILES ${CMAKE_CURRENT_BINARY_DIR}/sdrpp_module.cmake.devel
++        DESTINATION lib/cmake/sdrpp
++        RENAME sdrpp_module.cmake)
++
++install(DIRECTORY ${CMAKE_SOURCE_DIR}/core/src/
++        DESTINATION include/sdrpp
++        FILES_MATCHING PATTERN "*.h")
++
+ # Install directives
+ install(TARGETS sdrpp DESTINATION bin)
+ 

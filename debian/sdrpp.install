@@ -1,0 +1,5 @@
+usr/bin/sdrpp
+usr/lib/libsdrpp_core.so
+usr/lib/sdrpp/plugins/*
+usr/share/applications/sdrpp.desktop
+usr/share/sdrpp/*
