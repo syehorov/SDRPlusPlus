@@ -3,5 +3,7 @@
 export DEB_HOST_ARCH
 
 %:
-	dh $@ --buildsystem=cmake
+        dh $@ --buildsystem=cmake
 
+override_dh_auto_configure:
+        dh_auto_configure -- -DBUILD_TESTING=OFF
