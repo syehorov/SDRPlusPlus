@@ -103,16 +103,16 @@ namespace demod {
         }
 
         void showMenu() {
-            if (ImGui::Checkbox(("Stereo##_radio_wfm_stereo_" + name).c_str(), &_stereo)) {
-                setStereo(_stereo);
-                _config->acquire();
-                _config->conf[name][getName()]["stereo"] = _stereo;
-                _config->release(true);
-            }
             if (ImGui::Checkbox(("Low Pass##_radio_wfm_lowpass_" + name).c_str(), &_lowPass)) {
                 demod.setLowPass(_lowPass);
                 _config->acquire();
                 _config->conf[name][getName()]["lowPass"] = _lowPass;
+                _config->release(true);
+            }
+            if (ImGui::Checkbox(("Stereo##_radio_wfm_stereo_" + name).c_str(), &_stereo)) {
+                setStereo(_stereo);
+                _config->acquire();
+                _config->conf[name][getName()]["stereo"] = _stereo;
                 _config->release(true);
             }
             if (ImGui::Checkbox(("Decode RDS##_radio_wfm_rds_" + name).c_str(), &_rds)) {

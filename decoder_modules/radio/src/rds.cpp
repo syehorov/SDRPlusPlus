@@ -297,6 +297,7 @@ namespace rds {
         if (blockAvail[BLOCK_TYPE_D]) {
             programServiceName[psOffset] = (blocks[BLOCK_TYPE_D] >> 18) & 0xFF;
             programServiceName[psOffset + 1] = (blocks[BLOCK_TYPE_D] >> 10) & 0xFF;
+
             // Update the full version only when reaching the end
             if (offset == 3) {
                 programServiceNameFullUpdate = programServiceName;

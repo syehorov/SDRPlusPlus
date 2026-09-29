@@ -486,6 +486,7 @@ private:
                 core::modComManager.callInterface(selectedVfo, RADIO_IFACE_CMD_GET_MODE, NULL, &mode);
                 resp = std::string(radioModeToString[mode]) + "\n";
             }
+            // Append the bandwidth of the VFO if there is one
             if (!selectedVfo.empty()) {
                 resp += std::to_string((int)sigpath::vfoManager.getBandwidth(selectedVfo)) + "\n";
             }

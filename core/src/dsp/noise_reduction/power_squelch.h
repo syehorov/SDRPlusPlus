@@ -33,6 +33,7 @@ namespace dsp::noise_reduction {
         inline int process(int count, const complex_t* in, complex_t* out) {
             // Compute the amplitude of each sample
             volk_32fc_magnitude_32f(normBuffer, (lv_32fc_t*)in, count);
+
             // Compute the mean amplitude
             float sum = 0.0f;
             volk_32f_accumulator_s32f(&sum, normBuffer, count);

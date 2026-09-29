@@ -295,19 +295,6 @@ private:
             }
             if (!_this->nbEnabled && _this->enabled) { style::endDisabled(); }
         }
-        
-
-        // Squelch
-        if (ImGui::Checkbox(("Squelch##_radio_sqelch_ena_" + _this->name).c_str(), &_this->squelchEnabled)) {
-            _this->setSquelchEnabled(_this->squelchEnabled);
-        }
-        if (!_this->squelchEnabled && _this->enabled) { style::beginDisabled(); }
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(menuWidth - ImGui::GetCursorPosX());
-        if (ImGui::SliderFloat(("##_radio_sqelch_lvl_" + _this->name).c_str(), &_this->squelchLevel, _this->MIN_SQUELCH, _this->MAX_SQUELCH, "%.3fdB")) {
-            _this->setSquelchLevel(_this->squelchLevel);
-        }
-        if (!_this->squelchEnabled && _this->enabled) { style::endDisabled(); }
 
         // FM IF Noise Reduction
         if (_this->FMIFNRAllowed) {
@@ -371,7 +358,6 @@ private:
             }
             break;
         }
-        
 
         if (!_this->enabled) { style::endDisabled(); }
     }
@@ -460,7 +446,7 @@ private:
         squelchLevel = MIN_SQUELCH;
         ctcssToneId = ctcssTones.valueId(dsp::noise_reduction::CTCSS_TONE_67Hz);
         highPass = false;
-        squelchEnabled = false;
+
         postProcEnabled = selectedDemod->getPostProcEnabled();
         FMIFNRAllowed = selectedDemod->getFMIFNRAllowed();
         FMIFNREnabled = false;
@@ -468,6 +454,8 @@ private:
         squelchAllowed = selectedDemod->getSquelchAllowed();
         highPassAllowed = selectedDemod->getHighPassAllowed();
         nbAllowed = selectedDemod->getNBAllowed();
+        squelchAllowed = selectedDemod->getSquelchAllowed();
+        highPassAllowed = selectedDemod->getHighPassAllowed();
         nbEnabled = false;
         nbLevel = 0.0f;
         double ifSamplerate = selectedDemod->getIFSampleRate();
@@ -479,6 +467,7 @@ private:
         if (config.conf[name][selectedDemod->getName()].contains("snapInterval")) {
             snapInterval = config.conf[name][selectedDemod->getName()]["snapInterval"];
         }
+
         if (config.conf[name][selectedDemod->getName()].contains("squelchMode")) {
             std::string squelchModeStr = config.conf[name][selectedDemod->getName()]["squelchMode"];
             if (squelchModes.keyExists(squelchModeStr)) {
@@ -696,7 +685,7 @@ private:
             break;
 
         case SQUELCH_MODE_CTCSS_DECODE:
-           // Set the required tone to none and enable the CTCSS squelch block
+            // Set the required tone to none and enable the CTCSS squelch block
             ctcss.setRequiredTone(dsp::noise_reduction::CTCSS_TONE_NONE);
             afChain.enableBlock(&ctcss, [=](dsp::stream<dsp::stereo_t>* out){ stream.setInput(out); });
             break;

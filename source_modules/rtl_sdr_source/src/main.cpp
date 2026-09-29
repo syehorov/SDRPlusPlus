@@ -137,7 +137,6 @@ public:
                 sprintf(buf, "%s [%s]##%d", devName, (!snErr && snBuf[0]) ? snBuf : "No Serial", i);
             }
 
-
             // Add device to list
             devNames.push_back(buf);
             devListTxt += buf;
