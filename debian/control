@@ -10,4 +10,13 @@ Rules-Requires-Root: no
 Package: sdrpp
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description:  SDR++ is a cross-platform and open source SDR software with the aim of being bloat free and simple to use.
+Description:  SDR++ is a cross-platform and open source SDR software
+ with the aim of being bloat free and simple to use.
+
+Package: sdrpp-dev
+Section: libdevel
+Architecture: any
+Depends: sdrpp (= ${binary:Version}), ${misc:Depends}
+Description: development files for SDR++
+ Headers and the sdrpp_module.cmake build helper needed to compile
+ out-of-tree SDR++ plugins against this package's sdrpp_core library.

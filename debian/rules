@@ -3,7 +3,25 @@
 export DEB_HOST_ARCH
 
 %:
-        dh $@ --buildsystem=cmake
+	dh $@ --buildsystem=cmake
 
 override_dh_auto_configure:
-        dh_auto_configure -- -DBUILD_TESTING=OFF
+	dh_auto_configure -- -DBUILD_TESTING=OFF
+
+override_dh_auto_install:
+	dh_auto_install
+
+# Headers: mirror core/src/ tree exactly, so plugin includes like
+# #include "signal_path/signal_path.h" keep working unchanged.
+	mkdir -p debian/sdrpp-dev/usr/include/sdrpp
+	( cd core/src && find . -name '*.h' -exec cp --parents {} \
+		../../debian/sdrpp-dev/usr/include/sdrpp \; )
+
+# Patched sdrpp_module.cmake, substituted for the *installed* location
+# (not the in-tree build path baked in by the main CMakeLists.txt).
+	mkdir -p debian/sdrpp-dev/usr/lib/cmake/sdrpp
+	sed \
+		-e 's|@SDRPP_CORE_ROOT@|/usr/include/sdrpp|' \
+		-e 's|@SDRPP_MODULE_COMPILER_FLAGS@|-O3;-std=c++17|' \
+		sdrpp_module.cmake \
+		> debian/sdrpp-dev/usr/lib/cmake/sdrpp/sdrpp_module.cmake
