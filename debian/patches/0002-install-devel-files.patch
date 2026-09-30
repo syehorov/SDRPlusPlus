@@ -1,17 +1,3 @@
-Description: Install development files (headers + sdrpp_module.cmake) needed
- to build out-of-tree SDR++ plugins against the sdrpp-dev package.
- .
- Installs:
-  - core/src/ headers (and core/backends/glfw/ for the ImGui GLFW backend,
-    core/libcorrect/include/ when USE_INTERNAL_LIBCORRECT is enabled)
-  - headers of every built-in module (decoder_modules, misc_modules,
-    sink_modules, source_modules), so out-of-tree plugins that depend on
-    another module's *_interface.h can find it
-  - a devel copy of sdrpp_module.cmake pointing at the installed locations
-    instead of the build tree
-Author: <ваше ім'я> <ваш email>
-Forwarded: not-needed
-
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -404,9 +404,44 @@
