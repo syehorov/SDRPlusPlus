@@ -1,22 +1,57 @@
+Description: Install development files (headers + sdrpp_module.cmake) needed
+ to build out-of-tree SDR++ plugins against the sdrpp-dev package.
+ .
+ Installs:
+  - core/src/ headers (and core/backends/glfw/ for the ImGui GLFW backend,
+    core/libcorrect/include/ when USE_INTERNAL_LIBCORRECT is enabled)
+  - headers of every built-in module (decoder_modules, misc_modules,
+    sink_modules, source_modules), so out-of-tree plugins that depend on
+    another module's *_interface.h can find it
+  - a devel copy of sdrpp_module.cmake pointing at the installed locations
+    instead of the build tree
+Author: <ваше ім'я> <ваш email>
+Forwarded: not-needed
+
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -404,9 +404,35 @@
+@@ -404,9 +404,44 @@
  # cmake .. "-DCMAKE_TOOLCHAIN_FILE=C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake" -DOPT_BUILD_BLADERF_SOURCE=ON -DOPT_BUILD_LIMESDR_SOURCE=ON -DOPT_BUILD_SDRPLAY_SOURCE=ON -DOPT_BUILD_M17_DECODER=ON -DOPT_BUILD_SCANNER=ON -DOPT_BUILD_SCHEDULER=ON -DOPT_BUILD_USRP_SOURCE=ON -DOPT_BUILD_PAGER_DECODER=ON
  
  # Create module cmake file
  configure_file(${CMAKE_SOURCE_DIR}/sdrpp_module.cmake ${CMAKE_CURRENT_BINARY_DIR}/sdrpp_module.cmake @ONLY)
  
-+set(SDRPP_ROOT "${CMAKE_INSTALL_PREFIX}/include/sdrpp/")
+# Create devel package
++set(SDRPP_CORE_ROOT "${CMAKE_INSTALL_PREFIX}/include/sdrpp")
++set(SDRPP_BACKEND_ROOT "${CMAKE_INSTALL_PREFIX}/include/sdrpp-backend-glfw")
++set(SDRPP_LIBCORRECT_ROOT "${CMAKE_INSTALL_PREFIX}/include/sdrpp-libcorrect")
++set(SDRPP_MODULES_ROOT "${CMAKE_INSTALL_PREFIX}/include/sdrpp-modules")
 +configure_file(${CMAKE_SOURCE_DIR}/sdrpp_module.cmake ${CMAKE_CURRENT_BINARY_DIR}/sdrpp_module.cmake.devel @ONLY)
 +install(FILES ${CMAKE_CURRENT_BINARY_DIR}/sdrpp_module.cmake.devel
-+        DESTINATION lib/cmake/sdrpp
++        DESTINATION lib/cmake/Modules
 +        RENAME sdrpp_module.cmake)
 +
-+# Headers needed to build out-of-tree plugins
-+install(DIRECTORY ${CMAKE_SOURCE_DIR}/
++# Core headers needed to build out-of-tree plugins
++install(DIRECTORY ${CMAKE_SOURCE_DIR}/core/src/
 +        DESTINATION include/sdrpp
 +        FILES_MATCHING PATTERN "*.h")
 +
++install(DIRECTORY ${CMAKE_SOURCE_DIR}/core/backends/glfw/
++        DESTINATION include/sdrpp-backend-glfw
++        FILES_MATCHING PATTERN "*.h")
++
++if (USE_INTERNAL_LIBCORRECT)
++    install(DIRECTORY ${CMAKE_SOURCE_DIR}/core/libcorrect/include/
++            DESTINATION include/sdrpp-libcorrect
++            FILES_MATCHING PATTERN "*.h")
++endif ()
++
++install(DIRECTORY
++            ${CMAKE_SOURCE_DIR}/decoder_modules
++            ${CMAKE_SOURCE_DIR}/misc_modules
++            ${CMAKE_SOURCE_DIR}/sink_modules
++            ${CMAKE_SOURCE_DIR}/source_modules
++        DESTINATION include/sdrpp-modules
++        FILES_MATCHING PATTERN "*.h" PATTERN)
++
  # Install directives
  install(TARGETS sdrpp DESTINATION bin)
- 
