@@ -1,20 +1,11 @@
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -404,9 +404,44 @@
- # cmake .. "-DCMAKE_TOOLCHAIN_FILE=C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake" -DOPT_BUILD_BLADERF_SOURCE=ON -DOPT_BUILD_LIMESDR_SOURCE=ON -DOPT_BUILD_SDRPLAY_SOURCE=ON -DOPT_BUILD_M17_DECODER=ON -DOPT_BUILD_SCANNER=ON -DOPT_BUILD_SCHEDULER=ON -DOPT_BUILD_USRP_SOURCE=ON -DOPT_BUILD_PAGER_DECODER=ON
- 
+@@ -403,6 +403,34 @@
  # Create module cmake file
  configure_file(${CMAKE_SOURCE_DIR}/sdrpp_module.cmake ${CMAKE_CURRENT_BINARY_DIR}/sdrpp_module.cmake @ONLY)
  
-# Create devel package
-+set(SDRPP_CORE_ROOT "${CMAKE_INSTALL_PREFIX}/include/sdrpp")
-+set(SDRPP_BACKEND_ROOT "${CMAKE_INSTALL_PREFIX}/include/sdrpp-backend-glfw")
-+set(SDRPP_LIBCORRECT_ROOT "${CMAKE_INSTALL_PREFIX}/include/sdrpp-libcorrect")
-+set(SDRPP_MODULES_ROOT "${CMAKE_INSTALL_PREFIX}/include/sdrpp-modules")
-+configure_file(${CMAKE_SOURCE_DIR}/sdrpp_module.cmake ${CMAKE_CURRENT_BINARY_DIR}/sdrpp_module.cmake.devel @ONLY)
-+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/sdrpp_module.cmake.devel
-+        DESTINATION lib/cmake/Modules
-+        RENAME sdrpp_module.cmake)
++install(FILES ${CMAKE_SOURCE_DIR}/sdrpp_module.cmake
++        DESTINATION lib/cmake/sdrpp)
 +
 +# Core headers needed to build out-of-tree plugins
 +install(DIRECTORY ${CMAKE_SOURCE_DIR}/core/src/
@@ -31,13 +22,16 @@
 +            FILES_MATCHING PATTERN "*.h")
 +endif ()
 +
++# Headers of every built-in module, for out-of-tree plugins that depend on
++# another module's interface header (e.g. radio_interface.h)
 +install(DIRECTORY
 +            ${CMAKE_SOURCE_DIR}/decoder_modules
 +            ${CMAKE_SOURCE_DIR}/misc_modules
 +            ${CMAKE_SOURCE_DIR}/sink_modules
 +            ${CMAKE_SOURCE_DIR}/source_modules
 +        DESTINATION include/sdrpp-modules
-+        FILES_MATCHING PATTERN "*.h" PATTERN)
++        FILES_MATCHING PATTERN "*.h")
 +
  # Install directives
  install(TARGETS sdrpp DESTINATION bin)
+ install(DIRECTORY ${CMAKE_SOURCE_DIR}/root/res/bandplans DESTINATION share/sdrpp)

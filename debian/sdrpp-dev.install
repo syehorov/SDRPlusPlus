@@ -2,4 +2,4 @@ usr/include/sdrpp/*
 usr/include/sdrpp-backend-glfw/*
 usr/include/sdrpp-libcorrect/*
 usr/include/sdrpp-modules/*
-usr/lib/cmake/Modules/*
+usr/lib/cmake/sdrpp/*
