@@ -1,3 +1,15 @@
+Description: Make sdrpp_module.cmake usable for out-of-tree plugin builds.
+ .
+ When building a plugin against the installed sdrpp-dev package (rather
+ than in-tree via add_subdirectory), the sdrpp_core CMake target from
+ core/CMakeLists.txt does not exist, so target_link_libraries() on it
+ fails. This patch creates an IMPORTED target pointing at the installed
+ shared library instead, carrying all the public include directories
+ sdrpp_core normally exposes (core headers, ImGui, the GLFW backend,
+ and bundled libcorrect), so out-of-tree plugins get the same include
+ paths as in-tree ones.
+Author: <ваше ім'я> <ваш email>
+Forwarded: not-needed
 --- a/sdrpp_module.cmake
 +++ b/sdrpp_module.cmake
 @@ -1,7 +1,20 @@
@@ -26,6 +38,10 @@
      endif()
  endif ()
  
++# When building out-of-tree against an installed SDR++ (e.g. the Debian
++# sdrpp-dev package), the sdrpp_core CMake target from core/CMakeLists.txt
++# does not exist, since we never add_subdirectory("core") here. Create an
++# imported target carrying the same public include dirs instead.
 +if (NOT TARGET sdrpp_core)
 +    find_library(SDRPP_CORE_LIBRARY NAMES sdrpp_core)
 +    if (NOT SDRPP_CORE_LIBRARY)

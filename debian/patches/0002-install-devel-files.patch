@@ -1,3 +1,7 @@
+Description: Install development files (headers + sdrpp_module.cmake) needed
+ to build out-of-tree SDR++ plugins against the sdrpp-dev package.
+Author: <ваше ім'я> <ваш email>
+Forwarded: not-needed
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -403,6 +403,34 @@
@@ -10,16 +14,16 @@
 +# Core headers needed to build out-of-tree plugins
 +install(DIRECTORY ${CMAKE_SOURCE_DIR}/core/src/
 +        DESTINATION include/sdrpp
-+        FILES_MATCHING PATTERN "*.h")
++        FILES_MATCHING PATTERN "*.h*")
 +
 +install(DIRECTORY ${CMAKE_SOURCE_DIR}/core/backends/glfw/
 +        DESTINATION include/sdrpp-backend-glfw
-+        FILES_MATCHING PATTERN "*.h")
++        FILES_MATCHING PATTERN "*.h*")
 +
 +if (USE_INTERNAL_LIBCORRECT)
 +    install(DIRECTORY ${CMAKE_SOURCE_DIR}/core/libcorrect/include/
 +            DESTINATION include/sdrpp-libcorrect
-+            FILES_MATCHING PATTERN "*.h")
++            FILES_MATCHING PATTERN "*.h*")
 +endif ()
 +
 +# Headers of every built-in module, for out-of-tree plugins that depend on
@@ -30,7 +34,7 @@
 +            ${CMAKE_SOURCE_DIR}/sink_modules
 +            ${CMAKE_SOURCE_DIR}/source_modules
 +        DESTINATION include/sdrpp-modules
-+        FILES_MATCHING PATTERN "*.h")
++        FILES_MATCHING PATTERN "*.h*")
 +
  # Install directives
  install(TARGETS sdrpp DESTINATION bin)
